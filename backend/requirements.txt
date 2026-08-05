@@ -1,0 +1,26 @@
+# Pinned to the exact versions used and tested during development.
+# Install: pip install -r requirements.txt
+
+# Web framework
+fastapi==0.141.1
+uvicorn==0.52.1
+
+# Agent orchestration
+langgraph==1.2.10
+
+# Database
+SQLAlchemy==2.0.51
+psycopg2-binary==2.9.12
+python-dotenv==1.2.2
+
+# Data processing (Prepare/Process/Analyze stages)
+pandas==3.0.2
+numpy==2.4.4
+
+# Visualization (Share stage)
+matplotlib==3.10.8
+
+# LLM provider — Gemini (free tier, v1 default per master plan Section 3.5)
+# NOTE: google-generativeai is deprecated (confirmed during this install) —
+# using the maintained replacement SDK instead.
+google-genai==2.16.0

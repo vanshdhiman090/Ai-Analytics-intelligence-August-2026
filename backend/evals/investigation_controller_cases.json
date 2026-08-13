@@ -1,0 +1,9 @@
+[
+  {"id":"IC-001A-reactive-strong","paired_group":"evidence-reactivity","controller_mode":"reactive","expected":{"leading_dimension":"country","second_dimension":"device"}},
+  {"id":"IC-001B-reactive-weak","paired_group":"evidence-reactivity","controller_mode":"reactive","dataset":"weak","expected":{"leading_dimension":"device","second_dimension":"channel"}},
+  {"id":"IC-002-repeated-action","controller_mode":"repeated","expected":{"leading_dimension":"country","required_rejection":"dimension_already_tested_in_scope"}},
+  {"id":"IC-003-invalid-dimension","controller_mode":"invalid","expected":{"leading_dimension":"country","required_rejection":"dimension_not_allowed"}},
+  {"id":"IC-004-provider-mid-loop","controller_mode":"provider_mid","expected":{"leading_dimension":"country","required_rejection":"provider_failure"}},
+  {"id":"IC-005-scope-transition","controller_mode":"scope","dataset":"recursive","maximum_depth":2,"expected":{"leading_dimension":"country"}},
+  {"id":"IC-006-premature-stop","controller_mode":"premature_stop","expected":{"leading_dimension":"country","required_rejection":"premature_stop"}}
+]

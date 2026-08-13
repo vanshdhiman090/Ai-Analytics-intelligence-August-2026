@@ -13,6 +13,7 @@ import pandas as pd
 from app.services.tabular import DateSemanticError, parse_date_series
 from app.services.comparison_context import extract_explicit_comparison_context
 from app.services.hypothesis_planner import plan_hypotheses, update_hypothesis_statuses
+from app.services.investigation_controller import choose_next_action
 
 from app.domain.root_cause_contracts import (
     AdditiveKPISemanticDefinition,
@@ -37,6 +38,7 @@ from app.domain.root_cause_contracts import (
     InvestigationHypothesis,
     HypothesisPlanningRecord,
     InvestigationFilter,
+    InvestigationIteration,
     InvestigationPathNode,
     InvestigationState,
     SegmentContribution,
@@ -638,6 +640,8 @@ def run_single_level_investigation(
 ) -> InvestigationState:
     """Run the smallest real deterministic KPI investigation loop."""
     request = SingleLevelInvestigationRequest.model_validate(request)
+    if request.evidence_driven_control_enabled:
+        return run_evidence_driven_investigation(frame, request)
     if request.hypothesis_planning_enabled:
         return run_hypothesis_planned_investigation(frame, request)
     if request.maximum_depth > 1:
@@ -780,6 +784,199 @@ def _scoped_dimension_tests(
         evidence.append(InvestigationEvidence(evidence_id=evidence_id, test_id=test_id, kind="dimension_contribution", description=f"Signed additive contribution test for {dimension} within {scope_label}.", dimension=dimension, values={"parent_kpi_movement": parent_movement, "global_kpi_movement": global_movement, "negative_pressure": negative, "positive_offset": positive, "net_dimension_change": net, "scope": scope_label}))
         tests.append(DimensionContributionTest(test_id=test_id, dimension=dimension, status="completed", evidence_id=evidence_id, segment_contributions=tuple(contributions), negative_pressure=negative, positive_offset=positive, net_dimension_change=net, reconciles_to_kpi_change=abs(net - parent_movement) <= request.negligible_parent_movement_tolerance))
     return tests, aligned
+
+
+def _test_hypothesis_status(test: DimensionContributionTest, threshold: float) -> str:
+    aligned = [item for item in test.segment_contributions if item.direction == "with_incident"]
+    if not aligned:
+        return "rejected"
+    share = max(abs(item.contribution_to_net_change_pct or 0.0) for item in aligned)
+    return "supported" if share >= threshold else "weak" if share >= 5 else "rejected"
+
+
+def _verified_test_summaries(
+    tests: list[DimensionContributionTest], threshold: float
+) -> tuple[dict[str, object], ...]:
+    summaries: list[dict[str, object]] = []
+    for test in tests:
+        aligned = [item for item in test.segment_contributions if item.direction == "with_incident"]
+        aligned.sort(key=lambda item: (-abs(item.signed_change), item.segment))
+        lead = aligned[0] if aligned else None
+        summaries.append({
+            "dimension": test.dimension,
+            "status": _test_hypothesis_status(test, threshold),
+            "leading_segment": lead.segment if lead else None,
+            "signed_contribution": lead.signed_change if lead else None,
+            "local_contribution_pct": lead.contribution_to_net_change_pct if lead else None,
+            "evidence_strength": _investigation_strength(lead.contribution_to_net_change_pct if lead else None),
+            "test_id": test.test_id,
+            "evidence_id": test.evidence_id,
+        })
+    return tuple(summaries)
+
+
+def _successful_test_ceiling(dimension_count: int, maximum_depth: int) -> int:
+    """n + (n-1) + ... for the permitted greedy single-path scopes."""
+    return sum(dimension_count - depth for depth in range(min(dimension_count, maximum_depth)))
+
+
+def _leading_contributor(
+    tests: list[DimensionContributionTest], threshold: float
+) -> tuple[SegmentContribution | None, DimensionContributionTest | None]:
+    candidates = [
+        (segment, test)
+        for test in tests
+        for segment in test.segment_contributions
+        if segment.direction == "with_incident"
+    ]
+    candidates.sort(key=lambda item: (-abs(item[0].signed_change), item[0].dimension, item[0].segment))
+    if not candidates:
+        return None, None
+    best, test = candidates[0]
+    if not _is_material_contribution(best.contribution_to_net_change_pct, threshold):
+        return None, None
+    if _investigation_strength(best.contribution_to_net_change_pct) not in {"strong", "moderate"}:
+        return None, None
+    return best, test
+
+
+def _root_hypotheses(
+    dimensions: tuple[str, ...], tests: list[DimensionContributionTest]
+) -> tuple[InvestigationHypothesis, ...]:
+    by_dimension = {test.dimension: test for test in tests}
+    hypotheses: list[InvestigationHypothesis] = []
+    for index, dimension in enumerate(dimensions, 1):
+        test = by_dimension.get(dimension)
+        if test is None:
+            hypotheses.append(InvestigationHypothesis(hypothesis_id=f"IH{index}", dimension=dimension, statement=f"{dimension} contains a material segment contributor.", status="unresolved", rationale="The approved dimension was not successfully tested."))
+            continue
+        aligned = [item for item in test.segment_contributions if item.direction == "with_incident"]
+        aligned.sort(key=lambda item: (-abs(item.signed_change), item.segment))
+        lead = aligned[0] if aligned else None
+        strength = _investigation_strength(lead.contribution_to_net_change_pct if lead else None)
+        status = "supported" if strength in {"strong", "moderate"} else "weak" if strength == "weak" else "rejected"
+        hypotheses.append(InvestigationHypothesis(hypothesis_id=f"IH{index}", dimension=dimension, statement=f"{dimension} contains a material segment contributor.", status=status, leading_segment=lead.segment if lead else None, signed_contribution=lead.signed_change if lead else None, contribution_to_net_change_pct=lead.contribution_to_net_change_pct if lead else None, evidence_strength=strength, evidence_ids=(test.evidence_id,), rationale=(f"{lead.segment} is the leading aligned segment in the deterministic test." if lead else "No segment moved with the incident.")))
+    return tuple(hypotheses)
+
+
+def run_evidence_driven_investigation(
+    frame: pd.DataFrame, request: SingleLevelInvestigationRequest
+) -> InvestigationState:
+    """Run a bounded THINK -> one deterministic test -> OBSERVE loop."""
+    request = SingleLevelInvestigationRequest.model_validate(request)
+    prepared, health, evidence = _safe_period_frame(frame, request)
+    empty_hypotheses = tuple(InvestigationHypothesis(hypothesis_id=f"IH{i}", dimension=dimension, statement=f"{dimension} contains a material segment contributor.") for i, dimension in enumerate(request.candidate_dimensions, 1))
+    if any(check.blocking and check.status == "fail" for check in health):
+        return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="data_quality_incident", data_health=tuple(health), hypotheses=empty_hypotheses, evidence=tuple(evidence), stopping_reason="A blocking data-quality check failed before controlled investigation.")
+    selected = prepared[prepared["_investigation_period"].isin((request.baseline_period, request.comparison_period)) & prepared["_investigation_metric"].notna()]
+    totals = selected.groupby("_investigation_period")["_investigation_metric"].sum()
+    baseline = float(totals.get(request.baseline_period, 0.0))
+    comparison = float(totals.get(request.comparison_period, 0.0))
+    global_movement = comparison - baseline
+    evidence.append(InvestigationEvidence(evidence_id=f"IE{len(evidence) + 1}", kind="incident", description=f"{request.kpi.metric_name} moved from {baseline:g} to {comparison:g}.", values={"baseline_value": baseline, "comparison_value": comparison, "net_kpi_movement": global_movement}))
+    if abs(global_movement) <= request.negligible_parent_movement_tolerance:
+        return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="inconclusive", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=empty_hypotheses, evidence=tuple(evidence), stopping_reason="The KPI movement is numerically negligible.")
+
+    schema = tuple((str(column), str(dtype)) for column, dtype in frame.dtypes.items())
+    all_tests: list[DimensionContributionTest] = []
+    planning_records: list[HypothesisPlanningRecord] = []
+    iterations: list[InvestigationIteration] = []
+    executed_registry: set[tuple[tuple[tuple[str, str], ...], str]] = set()
+    ceiling = _successful_test_ceiling(len(request.candidate_dimensions), request.maximum_depth)
+
+    def run_scope(
+        scope: pd.DataFrame,
+        filter_path: tuple[InvestigationFilter, ...],
+        dimensions: tuple[str, ...],
+        parent_movement: float,
+        node_id: str,
+    ) -> tuple[list[DimensionContributionTest], HypothesisPlanningRecord]:
+        record = plan_hypotheses(request, schema=schema, filter_path=filter_path, allowed_dimensions=dimensions, planning_id=len(planning_records) + 1)
+        planning_records.append(record)
+        scope_tests: list[DimensionContributionTest] = []
+        tested: list[str] = []
+        priority_order = tuple(item.target_dimension for item in sorted(record.validated_proposals, key=lambda item: item.priority))
+        while True:
+            available = tuple(dimension for dimension in priority_order if dimension not in tested)
+            if not available:
+                break
+            if len(all_tests) >= ceiling:
+                raise RuntimeError("Derived successful-test ceiling would be exceeded")
+            known_ids = tuple(test.test_id for test in scope_tests)
+            decision = choose_next_action(request, filter_path=filter_path, available_dimensions=available, tested_dimensions=tuple(tested), planning_record=record, verified_results=_verified_test_summaries(scope_tests, request.material_contribution_pct), remaining_iteration_budget=ceiling - len(all_tests))
+            dimension = decision.executed_dimension
+            if decision.executed_action != "test_dimension" or dimension is None:
+                break
+            identity = (tuple((item.dimension, item.segment) for item in filter_path), dimension)
+            if identity in executed_registry:
+                raise RuntimeError("Duplicate scope/dimension execution was blocked")
+            before_evidence = len(evidence)
+            new_tests, _ = _scoped_dimension_tests(scope, (dimension,), request, parent_movement, global_movement, evidence, len(all_tests) + 1, list(filter_path))
+            test = new_tests[0]
+            executed_registry.add(identity)
+            scope_tests.append(test)
+            all_tests.append(test)
+            tested.append(dimension)
+            record = update_hypothesis_statuses(record, (test,), material_contribution_pct=request.material_contribution_pct)
+            planning_records[-1] = record
+            status = _test_hypothesis_status(test, request.material_contribution_pct)
+            iterations.append(InvestigationIteration(iteration_id=f"II{len(iterations) + 1}", scope_node_id=node_id, filter_path=filter_path, available_dimensions=available, tested_dimensions_before=tuple(tested[:-1]), known_test_ids=known_ids, requested_action=decision.proposal.action if decision.proposal else None, requested_dimension=decision.proposal.target_dimension if decision.proposal else None, executed_action="test_dimension", executed_dimension=dimension, decision_source=decision.decision_source, validation_status=decision.validation_status, rejection_reason=decision.rejection_reason, controller_reason_code=decision.proposal.reason_code if decision.proposal else None, fallback_used=decision.fallback_used, test_id=test.test_id, evidence_id=test.evidence_id, resulting_hypothesis_status=status, iteration_outcome="test_executed", continue_reason=("Eligible dimensions remain in this scope." if len(tested) < len(priority_order) else "All eligible dimensions in this scope are now tested.")))
+            if len(evidence) != before_evidence + 1:
+                raise RuntimeError("A controller iteration must create exactly one dimension-test evidence record")
+        return scope_tests, record
+
+    root_tests, _ = run_scope(prepared, (), request.candidate_dimensions, global_movement, "IN0")
+    if len(root_tests) != len(request.candidate_dimensions) or any(not test.reconciles_to_kpi_change for test in root_tests):
+        return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="inconclusive", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=_root_hypotheses(request.candidate_dimensions, root_tests), tests_executed=tuple(all_tests), evidence=tuple(evidence), stopping_reason="Controlled root scope did not achieve deterministic analytical sufficiency.", hypothesis_planning_records=tuple(planning_records), investigation_iterations=tuple(iterations))
+    best, winner_test = _leading_contributor(root_tests, request.material_contribution_pct)
+    root_node = InvestigationPathNode(node_id="IN0", depth=0, filter_path=(), segment_movement=global_movement, remaining_dimensions=request.candidate_dimensions, tested_dimensions=tuple(test.dimension for test in root_tests), test_ids=tuple(test.test_id for test in root_tests), evidence_ids=tuple(test.evidence_id for test in root_tests), data_health=tuple(health), evidence_strength=_investigation_strength(best.contribution_to_net_change_pct if best else None))
+    if best is None or winner_test is None:
+        return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="inconclusive", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=_root_hypotheses(request.candidate_dimensions, root_tests), tests_executed=tuple(all_tests), evidence=tuple(evidence), evidence_strength="insufficient", stopping_reason="No tested segment supplied a material aligned contribution.", investigation_path=(root_node,), hypothesis_planning_records=tuple(planning_records), investigation_iterations=tuple(iterations))
+
+    path = [InvestigationFilter(dimension=best.dimension, segment=best.segment)]
+    nodes = [root_node, InvestigationPathNode(node_id="IN1", depth=1, parent_node_id="IN0", filter_path=tuple(path), selected_dimension=best.dimension, selected_segment=best.segment, parent_kpi_movement=global_movement, segment_movement=best.signed_change, local_contribution_pct=best.contribution_to_net_change_pct, global_contribution_pct=best.contribution_to_net_change_pct, remaining_dimensions=tuple(dimension for dimension in request.candidate_dimensions if dimension != best.dimension), evidence_ids=(winner_test.evidence_id,), evidence_strength=_investigation_strength(best.contribution_to_net_change_pct))]
+    while True:
+        node = nodes[-1]
+        reason: str | None = None
+        if node.depth >= request.maximum_depth:
+            reason = "maximum_depth_reached"
+        elif not node.remaining_dimensions:
+            reason = "no_dimensions_remaining"
+        elif node.segment_movement is None or abs(node.segment_movement) <= request.negligible_parent_movement_tolerance:
+            reason = "negligible_parent_movement"
+        if reason:
+            nodes[-1] = node.model_copy(update={"stopping_reason": reason})
+            break
+        scoped = _filter_to_path(prepared, path)
+        before_health = len(evidence)
+        scoped_health = _append_scoped_health(scoped, request, evidence)
+        health_ids = tuple(item.evidence_id for item in evidence[before_health:])
+        if any(check.blocking and check.status == "fail" for check in scoped_health):
+            nodes[-1] = node.model_copy(update={"data_health": scoped_health, "evidence_ids": tuple(dict.fromkeys((*node.evidence_ids, *health_ids))), "stopping_reason": "scoped_data_quality_failure"})
+            break
+        baseline_rows = scoped[(scoped["_investigation_period"] == request.baseline_period) & scoped["_investigation_metric"].notna()]
+        comparison_rows = scoped[(scoped["_investigation_period"] == request.comparison_period) & scoped["_investigation_metric"].notna()]
+        if min(len(baseline_rows), len(comparison_rows)) < request.minimum_rows_per_period_for_drill_down:
+            nodes[-1] = node.model_copy(update={"data_health": scoped_health, "evidence_ids": tuple(dict.fromkeys((*node.evidence_ids, *health_ids))), "stopping_reason": "insufficient_rows"})
+            break
+        scope_tests, _ = run_scope(scoped, tuple(path), node.remaining_dimensions, float(node.segment_movement), node.node_id)
+        nodes[-1] = node.model_copy(update={"data_health": scoped_health, "tested_dimensions": tuple(test.dimension for test in scope_tests), "test_ids": tuple(test.test_id for test in scope_tests), "evidence_ids": tuple(dict.fromkeys((*node.evidence_ids, *health_ids, *(test.evidence_id for test in scope_tests))))})
+        if len(scope_tests) != len(node.remaining_dimensions) or any(not test.reconciles_to_kpi_change for test in scope_tests):
+            nodes[-1] = nodes[-1].model_copy(update={"stopping_reason": "reconciliation_failure"})
+            break
+        child, child_test = _leading_contributor(scope_tests, request.material_contribution_pct)
+        if child is None or child_test is None:
+            aligned_exists = any(segment.direction == "with_incident" for test in scope_tests for segment in test.segment_contributions)
+            nodes[-1] = nodes[-1].model_copy(update={"stopping_reason": "no_material_child_contributor" if aligned_exists else "no_aligned_child_contributor"})
+            break
+        path.append(InvestigationFilter(dimension=child.dimension, segment=child.segment))
+        depth = node.depth + 1
+        global_share = child.signed_change / global_movement * 100
+        nodes.append(InvestigationPathNode(node_id=f"IN{depth}", depth=depth, parent_node_id=node.node_id, filter_path=tuple(path), selected_dimension=child.dimension, selected_segment=child.segment, parent_kpi_movement=node.segment_movement, segment_movement=child.signed_change, local_contribution_pct=child.contribution_to_net_change_pct, global_contribution_pct=global_share, remaining_dimensions=tuple(dimension for dimension in node.remaining_dimensions if dimension != child.dimension), evidence_ids=(child_test.evidence_id,), evidence_strength=_investigation_strength(child.contribution_to_net_change_pct)))
+
+    if len(all_tests) > ceiling:
+        raise RuntimeError("Controlled investigation exceeded its derived test ceiling")
+    return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="strongest_supported_driver", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=_root_hypotheses(request.candidate_dimensions, root_tests), tests_executed=tuple(all_tests), evidence=tuple(evidence), leading_dimension=best.dimension, leading_segment=best.segment, leading_signed_contribution=best.signed_change, leading_contribution_to_net_change_pct=best.contribution_to_net_change_pct, downward_pressure=winner_test.negative_pressure, positive_offset=winner_test.positive_offset, explained_movement=best.signed_change, unexplained_movement=global_movement-best.signed_change, evidence_strength=_investigation_strength(best.contribution_to_net_change_pct), stopping_reason=nodes[-1].stopping_reason or "Controlled investigation completed.", investigation_path=tuple(nodes), hypothesis_planning_records=tuple(planning_records), investigation_iterations=tuple(iterations))
 
 
 def run_hypothesis_planned_investigation(

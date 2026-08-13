@@ -52,6 +52,25 @@ HypothesisProposalRejectionReason = Literal[
     "causal_or_certainty_claim",
     "unsafe_brief_reason",
 ]
+ControllerReasonCode = Literal[
+    "highest_planner_priority",
+    "resolve_remaining_uncertainty",
+    "follow_supported_scope",
+    "compare_eligible_dimensions",
+    "no_useful_test_remaining",
+]
+ControllerRejectionReason = Literal[
+    "provider_failure",
+    "malformed_output",
+    "dimension_not_allowed",
+    "dimension_already_tested_in_scope",
+    "dimension_in_filter_path",
+    "unsupported_numeric_claim",
+    "causal_or_certainty_claim",
+    "unsafe_brief_reason",
+    "premature_stop",
+    "data_health_blocked",
+]
 
 
 class RCAContract(BaseModel):
@@ -317,6 +336,7 @@ class SingleLevelInvestigationRequest(RCAContract):
     minimum_rows_per_period_for_drill_down: int = Field(default=5, ge=1)
     negligible_parent_movement_tolerance: float = Field(default=1e-9, ge=0.0)
     hypothesis_planning_enabled: bool = False
+    evidence_driven_control_enabled: bool = False
 
     @model_validator(mode="after")
     def periods_and_dimensions_must_be_distinct(self) -> "SingleLevelInvestigationRequest":
@@ -422,9 +442,48 @@ class HypothesisPlanningRecord(RCAContract):
     planner_mode: Literal["llm", "deterministic_fallback", "llm_with_fallback"]
 
 
+class NextTestActionProposal(RCAContract):
+    action: Literal["test_dimension", "stop"]
+    target_dimension: str | None = Field(default=None, max_length=128)
+    reason_code: ControllerReasonCode
+    brief_reason: str | None = Field(default=None, max_length=180)
+
+    @model_validator(mode="after")
+    def target_matches_action(self) -> "NextTestActionProposal":
+        if self.action == "test_dimension" and not self.target_dimension:
+            raise ValueError("test_dimension requires target_dimension")
+        if self.action == "stop" and self.target_dimension is not None:
+            raise ValueError("stop must not include target_dimension")
+        return self
+
+
 class InvestigationFilter(RCAContract):
     dimension: str = Field(min_length=1)
     segment: str = Field(min_length=1)
+
+
+class InvestigationIteration(RCAContract):
+    iteration_id: str = Field(pattern=r"^II\d+$")
+    scope_node_id: str = Field(pattern=r"^IN\d+$")
+    filter_path: tuple[InvestigationFilter, ...] = Field(default_factory=tuple)
+    available_dimensions: tuple[str, ...]
+    tested_dimensions_before: tuple[str, ...] = Field(default_factory=tuple)
+    known_test_ids: tuple[str, ...] = Field(default_factory=tuple)
+    requested_action: Literal["test_dimension", "stop"] | None = None
+    requested_dimension: str | None = None
+    executed_action: Literal["test_dimension", "stop"]
+    executed_dimension: str | None = None
+    decision_source: Literal["llm", "deterministic_fallback"]
+    validation_status: Literal["accepted", "rejected"]
+    rejection_reason: ControllerRejectionReason | None = None
+    controller_reason_code: ControllerReasonCode | None = None
+    fallback_used: bool = False
+    test_id: str | None = Field(default=None, pattern=r"^IT\d+$")
+    evidence_id: str | None = Field(default=None, pattern=r"^IE\d+$")
+    resulting_hypothesis_status: InvestigationHypothesisStatus | None = None
+    iteration_outcome: Literal["test_executed", "stop_accepted"]
+    continue_reason: str | None = None
+    terminal_reason: str | None = None
 
 
 class InvestigationPathNode(RCAContract):
@@ -478,3 +537,4 @@ class InvestigationState(RCAContract):
     # depth 0 plus the one greedy selected path.
     investigation_path: tuple[InvestigationPathNode, ...] = Field(default_factory=tuple)
     hypothesis_planning_records: tuple[HypothesisPlanningRecord, ...] = Field(default_factory=tuple)
+    investigation_iterations: tuple[InvestigationIteration, ...] = Field(default_factory=tuple)

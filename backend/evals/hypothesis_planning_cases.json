@@ -1,0 +1,7 @@
+[
+  {"id":"HP-001-relevant-ranking","true_driver_dimension":"country","planner_outputs":[[{"target_dimension":"country","reason_code":"kpi_relevance","brief_reason":"Relevant approved cut"}]],"expected":{"leading_dimension":"country"}},
+  {"id":"HP-002-hallucinated-dimension","true_driver_dimension":"country","planner_outputs":[[{"target_dimension":"marketing_campaign","reason_code":"kpi_relevance"},{"target_dimension":"country","reason_code":"business_structure"}]],"expected":{"leading_dimension":"country"}},
+  {"id":"HP-003-same-scope-duplicate","true_driver_dimension":"country","planner_outputs":[[{"target_dimension":"device","reason_code":"kpi_relevance"},{"target_dimension":"device","reason_code":"business_structure"},{"target_dimension":"country","reason_code":"current_scope_relevance"}]],"expected":{"leading_dimension":"country"}},
+  {"id":"HP-004-deep-scope","dataset":"recursive","true_driver_dimension":"country","request_overrides":{"maximum_depth":3,"minimum_rows_per_period_for_drill_down":1},"planner_outputs":[[{"target_dimension":"country","reason_code":"kpi_relevance"}],[{"target_dimension":"customer_type","reason_code":"current_scope_relevance"}],[{"target_dimension":"customer_type","reason_code":"current_scope_relevance"}]],"expected":{"leading_dimension":"country"},"expected_root_scope":[{"dimension":"country","segment":"Germany"}]},
+  {"id":"HP-005-provider-failure","true_driver_dimension":"country","provider_failure":true,"expected":{"leading_dimension":"country"}}
+]

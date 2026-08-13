@@ -6,12 +6,13 @@ code, invent hypotheses, or upgrade observational evidence into causality.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 
 import pandas as pd
 
 from app.services.tabular import DateSemanticError, parse_date_series
 from app.services.comparison_context import extract_explicit_comparison_context
+from app.services.hypothesis_planner import plan_hypotheses, update_hypothesis_statuses
 
 from app.domain.root_cause_contracts import (
     AdditiveKPISemanticDefinition,
@@ -34,6 +35,7 @@ from app.domain.root_cause_contracts import (
     InvestigationEvidence,
     InvestigationHealthCheck,
     InvestigationHypothesis,
+    HypothesisPlanningRecord,
     InvestigationFilter,
     InvestigationPathNode,
     InvestigationState,
@@ -636,6 +638,8 @@ def run_single_level_investigation(
 ) -> InvestigationState:
     """Run the smallest real deterministic KPI investigation loop."""
     request = SingleLevelInvestigationRequest.model_validate(request)
+    if request.hypothesis_planning_enabled:
+        return run_hypothesis_planned_investigation(frame, request)
     if request.maximum_depth > 1:
         return run_recursive_investigation(frame, request)
     prepared, health, evidence = _safe_period_frame(frame, request)
@@ -778,8 +782,58 @@ def _scoped_dimension_tests(
     return tests, aligned
 
 
+def run_hypothesis_planned_investigation(
+    frame: pd.DataFrame, request: SingleLevelInvestigationRequest
+) -> InvestigationState:
+    """Add bounded dimension ordering without letting an LLM affect evidence."""
+    schema = tuple((str(column), str(dtype)) for column, dtype in frame.dtypes.items())
+    records: list[HypothesisPlanningRecord] = []
+
+    def plan_scope(
+        filter_path: tuple[InvestigationFilter, ...], allowed_dimensions: tuple[str, ...]
+    ) -> tuple[tuple[str, ...], HypothesisPlanningRecord]:
+        # History is intentionally keyed by the exact analytical population.
+        previously_tested = tuple(
+            proposal.target_dimension
+            for record in records
+            if record.filter_path == filter_path
+            for proposal in record.validated_proposals
+            if proposal.status in {"supported", "weak", "rejected"}
+        )
+        record = plan_hypotheses(
+            request,
+            schema=schema,
+            filter_path=filter_path,
+            allowed_dimensions=allowed_dimensions,
+            already_tested_dimensions=previously_tested,
+            planning_id=len(records) + 1,
+        )
+        return tuple(item.target_dimension for item in record.validated_proposals), record
+
+    root_order, root_record = plan_scope((), request.candidate_dimensions)
+    records.append(root_record)
+    deterministic_request = request.model_copy(
+        update={"candidate_dimensions": root_order, "hypothesis_planning_enabled": False}
+    )
+    if deterministic_request.maximum_depth > 1:
+        result = run_recursive_investigation(
+            frame,
+            deterministic_request,
+            planning_callback=plan_scope,
+            planning_records=records,
+        )
+    else:
+        result = run_single_level_investigation(frame, deterministic_request)
+    records[0] = update_hypothesis_statuses(root_record, result.tests_executed[:len(root_order)], material_contribution_pct=request.material_contribution_pct)
+    return result.model_copy(update={"hypothesis_planning_records": tuple(records)})
+
+
 def run_recursive_investigation(
-    frame: pd.DataFrame, request: SingleLevelInvestigationRequest | Mapping[str, object]
+    frame: pd.DataFrame,
+    request: SingleLevelInvestigationRequest | Mapping[str, object],
+    *,
+    planning_callback: Callable[[tuple[InvestigationFilter, ...], tuple[str, ...]], tuple[tuple[str, ...], HypothesisPlanningRecord]] | None = None,
+    planning_records: list[HypothesisPlanningRecord] | None = None,
 ) -> InvestigationState:
     """Greedily follow one deterministic, evidence-preserving drill-down path."""
     request = SingleLevelInvestigationRequest.model_validate(request)
@@ -825,8 +879,14 @@ def run_recursive_investigation(
         if min(len(baseline_rows), len(comparison_rows)) < request.minimum_rows_per_period_for_drill_down:
             stop("insufficient_rows", health=health, new_evidence_ids=health_evidence_ids)
             break
-        tests, aligned = _scoped_dimension_tests(scoped, node.remaining_dimensions, request, node.segment_movement, root.net_kpi_movement or 0.0, evidence, len(all_tests) + 1, path)
+        dimensions_to_test = node.remaining_dimensions
+        record: HypothesisPlanningRecord | None = None
+        if planning_callback is not None:
+            dimensions_to_test, record = planning_callback(tuple(path), node.remaining_dimensions)
+        tests, aligned = _scoped_dimension_tests(scoped, dimensions_to_test, request, node.segment_movement, root.net_kpi_movement or 0.0, evidence, len(all_tests) + 1, path)
         all_tests.extend(tests)
+        if record is not None and planning_records is not None:
+            planning_records.append(update_hypothesis_statuses(record, tests, material_contribution_pct=request.material_contribution_pct))
         if any(not test.reconciles_to_kpi_change for test in tests):
             stop("reconciliation_failure", health=health, tests=tests, new_evidence_ids=health_evidence_ids)
             break

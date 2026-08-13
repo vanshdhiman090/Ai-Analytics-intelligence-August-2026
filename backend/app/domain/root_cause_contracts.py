@@ -36,6 +36,22 @@ InvestigationStoppingReason = Literal[
     "reconciliation_failure",
     "negligible_parent_movement",
 ]
+HypothesisReasonCode = Literal[
+    "kpi_relevance",
+    "business_structure",
+    "current_scope_relevance",
+    "unresolved_uncertainty",
+    "potential_explanatory_value",
+]
+HypothesisProposalSource = Literal["llm", "deterministic_fallback"]
+HypothesisProposalRejectionReason = Literal[
+    "dimension_not_allowed",
+    "dimension_already_tested_in_scope",
+    "duplicate_dimension",
+    "unsupported_numeric_claim",
+    "causal_or_certainty_claim",
+    "unsafe_brief_reason",
+]
 
 
 class RCAContract(BaseModel):
@@ -300,6 +316,7 @@ class SingleLevelInvestigationRequest(RCAContract):
     # A deterministic safety policy only; this is not statistical confidence.
     minimum_rows_per_period_for_drill_down: int = Field(default=5, ge=1)
     negligible_parent_movement_tolerance: float = Field(default=1e-9, ge=0.0)
+    hypothesis_planning_enabled: bool = False
 
     @model_validator(mode="after")
     def periods_and_dimensions_must_be_distinct(self) -> "SingleLevelInvestigationRequest":
@@ -364,6 +381,47 @@ class InvestigationHypothesis(RCAContract):
     rationale: str = "Not tested."
 
 
+class HypothesisProposal(RCAContract):
+    """The deliberately small model-authored proposal surface."""
+
+    target_dimension: str = Field(min_length=1, max_length=128)
+    reason_code: HypothesisReasonCode
+    brief_reason: str | None = Field(default=None, max_length=180)
+
+
+class HypothesisProposalSet(RCAContract):
+    proposals: tuple[HypothesisProposal, ...] = Field(min_length=1, max_length=12)
+
+
+class RejectedHypothesisProposal(RCAContract):
+    target_dimension: str = Field(min_length=1, max_length=128)
+    rejection_reason: HypothesisProposalRejectionReason
+
+
+class PlannedHypothesis(RCAContract):
+    hypothesis_id: str = Field(pattern=r"^HP\d+$")
+    target_dimension: str = Field(min_length=1)
+    priority: int = Field(ge=1)
+    statement: str = Field(min_length=1)
+    reason_code: HypothesisReasonCode
+    brief_reason: str | None = None
+    evidence_needed: Literal["signed_segment_contribution"] = "signed_segment_contribution"
+    source: HypothesisProposalSource
+    status: InvestigationHypothesisStatus = "untested"
+    evidence_ids: tuple[str, ...] = Field(default_factory=tuple)
+
+
+class HypothesisPlanningRecord(RCAContract):
+    planning_id: str = Field(pattern=r"^IP\d+$")
+    planner_version: Literal["hypothesis-planner-v1"] = "hypothesis-planner-v1"
+    filter_path: tuple["InvestigationFilter", ...] = Field(default_factory=tuple)
+    allowed_dimensions: tuple[str, ...]
+    validated_proposals: tuple[PlannedHypothesis, ...]
+    rejected_proposals: tuple[RejectedHypothesisProposal, ...] = Field(default_factory=tuple)
+    fallback_reason: Literal["provider_failure", "unusable_output", "no_valid_proposals"] | None = None
+    planner_mode: Literal["llm", "deterministic_fallback", "llm_with_fallback"]
+
+
 class InvestigationFilter(RCAContract):
     dimension: str = Field(min_length=1)
     segment: str = Field(min_length=1)
@@ -419,3 +477,4 @@ class InvestigationState(RCAContract):
     # Empty in the legacy/default Milestone 1 route. Recursive runs contain
     # depth 0 plus the one greedy selected path.
     investigation_path: tuple[InvestigationPathNode, ...] = Field(default_factory=tuple)
+    hypothesis_planning_records: tuple[HypothesisPlanningRecord, ...] = Field(default_factory=tuple)

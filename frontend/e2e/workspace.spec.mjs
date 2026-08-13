@@ -211,6 +211,23 @@ test("no-material-driver result remains inconclusive", async ({ page }) => {
   await expect(page.getByText("Add a small number of business-relevant candidate dimensions.")).toBeVisible();
 });
 
+test("max-depth result explains the governed limit without implying a user control", async ({ page }) => {
+  const result = successResponse({
+    conclusion: {
+      ...successResponse().conclusion,
+      terminal_status: "bounded_by_max_depth",
+      caveats: ["maximum_depth_boundary", "robustness_applies_to_upstream_scope_only"],
+      recommended_next_action: "increase_investigation_depth",
+    },
+  });
+  await mockApi(page, { rcaResponse: result });
+  await uploadAndConfigure(page);
+  await runInvestigation(page);
+  await expect(page.getByText("Further drill-down is recommended, but this investigation has reached the current server-governed depth limit.")).toBeVisible();
+  await expect(page.getByText("Continue the investigation one governed level deeper.")).toHaveCount(0);
+  assertSemanticSafety(await page.locator("body").innerText());
+});
+
 test("RCA 422 errors map inline and preserve the configured form", async ({ page }) => {
   await mockApi(page, { rcaError: { status: 422, body: { error: { code: "invalid_request", message: "The RCA request is invalid.", request_id: "request-422", fields: [{ field: "baseline_period", code: "value_error" }] } } } });
   await uploadAndConfigure(page);

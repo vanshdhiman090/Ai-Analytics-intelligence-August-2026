@@ -52,7 +52,7 @@ export const NEXT_ACTION_LABELS = {
   improve_data_quality: "Repair the identified data-quality issue, then rerun the same investigation.",
   collect_more_data: "Collect enough comparable data for the requested periods and scope.",
   expand_candidate_dimensions: "Add a small number of business-relevant candidate dimensions.",
-  increase_investigation_depth: "Continue the investigation one governed level deeper.",
+  increase_investigation_depth: "Further drill-down is recommended, but this investigation has reached the current server-governed depth limit.",
   review_large_offsets: "Review the segments creating the largest positive offsets.",
   complete_required_testing: "Complete the required deterministic contribution tests.",
   repair_reconciliation: "Repair the decomposition definition so the arithmetic ties out.",

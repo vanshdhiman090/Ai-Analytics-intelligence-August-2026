@@ -26,6 +26,16 @@ EvidenceStrength = Literal["high", "medium", "low"]
 InvestigationEvidenceStrength = Literal["strong", "moderate", "weak", "insufficient"]
 InvestigationHypothesisStatus = Literal["untested", "supported", "weak", "rejected", "unresolved"]
 InvestigationOutcome = Literal["strongest_supported_driver", "data_quality_incident", "inconclusive"]
+InvestigationStoppingReason = Literal[
+    "maximum_depth_reached",
+    "no_dimensions_remaining",
+    "scoped_data_quality_failure",
+    "insufficient_rows",
+    "no_aligned_child_contributor",
+    "no_material_child_contributor",
+    "reconciliation_failure",
+    "negligible_parent_movement",
+]
 
 
 class RCAContract(BaseModel):
@@ -284,6 +294,12 @@ class SingleLevelInvestigationRequest(RCAContract):
     material_contribution_pct: float = Field(default=20.0, ge=0.0, le=100.0)
     comparison_coverage_ratio: float = Field(default=0.8, gt=0.0, le=1.0)
     maximum_current_metric_null_pct: float = Field(default=0.2, ge=0.0, le=1.0)
+    # Depth 0 is the global incident; depth 1 is the first selected segment.
+    # The default preserves the exact Milestone 1 single-level behavior.
+    maximum_depth: int = Field(default=1, ge=1, le=8)
+    # A deterministic safety policy only; this is not statistical confidence.
+    minimum_rows_per_period_for_drill_down: int = Field(default=5, ge=1)
+    negligible_parent_movement_tolerance: float = Field(default=1e-9, ge=0.0)
 
     @model_validator(mode="after")
     def periods_and_dimensions_must_be_distinct(self) -> "SingleLevelInvestigationRequest":
@@ -348,6 +364,33 @@ class InvestigationHypothesis(RCAContract):
     rationale: str = "Not tested."
 
 
+class InvestigationFilter(RCAContract):
+    dimension: str = Field(min_length=1)
+    segment: str = Field(min_length=1)
+
+
+class InvestigationPathNode(RCAContract):
+    """One selected scope in the greedy recursive investigation path."""
+
+    node_id: str = Field(pattern=r"^IN\d+$")
+    depth: int = Field(ge=0)
+    parent_node_id: str | None = Field(default=None, pattern=r"^IN\d+$")
+    filter_path: tuple[InvestigationFilter, ...] = Field(default_factory=tuple)
+    selected_dimension: str | None = None
+    selected_segment: str | None = None
+    parent_kpi_movement: float | None = None
+    segment_movement: float | None = None
+    local_contribution_pct: float | None = None
+    global_contribution_pct: float | None = None
+    remaining_dimensions: tuple[str, ...] = Field(default_factory=tuple)
+    tested_dimensions: tuple[str, ...] = Field(default_factory=tuple)
+    test_ids: tuple[str, ...] = Field(default_factory=tuple)
+    evidence_ids: tuple[str, ...] = Field(default_factory=tuple)
+    data_health: tuple[InvestigationHealthCheck, ...] = Field(default_factory=tuple)
+    evidence_strength: InvestigationEvidenceStrength = "insufficient"
+    stopping_reason: InvestigationStoppingReason | None = None
+
+
 class InvestigationState(RCAContract):
     investigation_id: str
     goal: str
@@ -373,3 +416,6 @@ class InvestigationState(RCAContract):
     unexplained_movement: float | None = None
     evidence_strength: InvestigationEvidenceStrength = "insufficient"
     stopping_reason: str
+    # Empty in the legacy/default Milestone 1 route. Recursive runs contain
+    # depth 0 plus the one greedy selected path.
+    investigation_path: tuple[InvestigationPathNode, ...] = Field(default_factory=tuple)

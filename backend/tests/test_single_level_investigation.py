@@ -101,3 +101,87 @@ def test_root_cause_agent_uses_real_deterministic_investigation_path(tmp_path, m
     monkeypatch.setattr("app.agent.subagents.root_cause_agent.AnalyzeAgent.run_analysis", lambda *_: (_ for _ in ()).throw(AssertionError("LLM path must not run")))
     result = RootCauseAgent().execute({"cleaned_path": str(path), "investigation_request": request()})
     assert result["investigation_state"]["leading_segment"] == "Germany"
+
+
+def _rows_for_recursive_path(*, mobile_null_rows=0):
+    leaves = [
+        ("Germany", "Mobile", "Returning", 200, 155),
+        ("Germany", "Mobile", "New", 100, 85),
+        ("Germany", "Desktop", "Returning", 100, 90),
+        ("Germany", "Desktop", "New", 100, 90),
+        ("France", "Mobile", "Returning", 100, 90),
+        ("France", "Mobile", "New", 100, 90),
+    ]
+    rows = []
+    for country, device, customer_type, baseline, comparison in leaves:
+        for number in range(5):
+            base = {"date": "2026-01-01", "country": country, "device": device, "customer_type": customer_type, "revenue": baseline / 5, "id": f"b-{country}-{device}-{customer_type}-{number}"}
+            current = {**base, "date": "2026-02-01", "revenue": comparison / 5, "id": f"c-{country}-{device}-{customer_type}-{number}"}
+            rows.extend((base, current))
+    for number in range(mobile_null_rows):
+        rows.append({"date": "2026-02-01", "country": "Germany", "device": "Mobile", "customer_type": "Returning", "revenue": None, "id": f"null-{number}"})
+    return rows
+
+
+def test_recursive_path_uses_local_and_global_denominators():
+    state = run_single_level_investigation(pd.DataFrame(_rows_for_recursive_path()), request(candidate_dimensions=["country", "device", "customer_type"], maximum_depth=3))
+    assert [(node.depth, node.selected_dimension, node.selected_segment) for node in state.investigation_path] == [(0, None, None), (1, "country", "Germany"), (2, "device", "Mobile"), (3, "customer_type", "Returning")]
+    mobile = state.investigation_path[2]
+    assert mobile.parent_kpi_movement == -80
+    assert mobile.segment_movement == -60
+    assert mobile.local_contribution_pct == 75
+    assert mobile.global_contribution_pct == 60
+    assert state.investigation_path[-1].stopping_reason == "maximum_depth_reached"
+
+
+def test_recursive_stops_when_no_child_is_material():
+    rows = []
+    for index in range(10):
+        for number in range(5):
+            rows.extend((
+                {"date": "2026-01-01", "country": "Germany", "device": f"D{index}", "revenue": 10, "id": f"b-{index}-{number}"},
+                {"date": "2026-02-01", "country": "Germany", "device": f"D{index}", "revenue": 8, "id": f"c-{index}-{number}"},
+            ))
+    for number in range(5):
+        rows.extend((
+            {"date": "2026-01-01", "country": "France", "device": "F", "revenue": 100, "id": f"fb-{number}"},
+            {"date": "2026-02-01", "country": "France", "device": "F", "revenue": 96, "id": f"fc-{number}"},
+        ))
+    state = run_single_level_investigation(pd.DataFrame(rows), request(candidate_dimensions=["country", "device"], maximum_depth=3))
+    assert state.investigation_path[1].selected_segment == "Germany"
+    assert state.investigation_path[-1].stopping_reason == "no_material_child_contributor"
+
+
+def test_recursive_detects_deep_scoped_data_quality_failure():
+    state = run_single_level_investigation(pd.DataFrame(_rows_for_recursive_path(mobile_null_rows=5)), request(candidate_dimensions=["country", "device", "customer_type"], maximum_depth=3))
+    assert state.investigation_path[-1].selected_segment == "Mobile"
+    assert state.investigation_path[-1].stopping_reason == "scoped_data_quality_failure"
+
+
+def test_missing_dimension_value_reconciles_and_offsets_can_exceed_100_percent():
+    frame = pd.DataFrame([
+        {"date": "2026-01-01", "country": "Germany", "revenue": 200}, {"date": "2026-02-01", "country": "Germany", "revenue": 70},
+        {"date": "2026-01-01", "country": "France", "revenue": 100}, {"date": "2026-02-01", "country": "France", "revenue": 130},
+        {"date": "2026-01-01", "country": None, "revenue": 100}, {"date": "2026-02-01", "country": None, "revenue": 100},
+        {"date": "2026-01-01", "country": "Tiny", "revenue": 10}, {"date": "2026-02-01", "country": "Tiny", "revenue": 0},
+    ])
+    state = run_single_level_investigation(frame, request(candidate_dimensions=["country"]))
+    contribution_test = state.tests_executed[0]
+    assert contribution_test.reconciles_to_kpi_change
+    assert any(item.segment == "__MISSING__" for item in contribution_test.segment_contributions)
+    assert state.leading_segment == "Germany"
+    assert state.leading_contribution_to_net_change_pct == 118.18181818181819
+    assert state.positive_offset == 30
+
+
+def test_maximum_depth_one_preserves_the_single_level_result():
+    baseline = run_single_level_investigation(driver_frame(), request())
+    bounded = run_single_level_investigation(driver_frame(), request(maximum_depth=1))
+    assert bounded.model_dump(exclude={"investigation_path"}) == baseline.model_dump(exclude={"investigation_path"})
+    assert bounded.investigation_path == ()
+
+
+def test_negligible_parent_movement_stops_before_child_percentages():
+    state = run_single_level_investigation(pd.DataFrame(_rows_for_recursive_path()), request(candidate_dimensions=["country", "device", "customer_type"], maximum_depth=3, negligible_parent_movement_tolerance=100))
+    assert state.investigation_path[-1].selected_segment == "Germany"
+    assert state.investigation_path[-1].stopping_reason == "negligible_parent_movement"

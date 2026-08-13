@@ -20,7 +20,18 @@ def run_benchmark(cases_path: Path | None = None) -> dict[str, object]:
             pd.DataFrame(case["rows"]).to_csv(csv_path, index=False)
             actual = RootCauseAgent().execute({"cleaned_path": str(csv_path), "investigation_request": case["request"]})["investigation_state"]
             expected = case["expected"]
-            mismatches = {key: {"expected": value, "actual": actual.get(key)} for key, value in expected.items() if actual.get(key) != value}
+            mismatches = {
+                key: {"expected": value, "actual": actual.get(key)}
+                for key, value in expected.items()
+                if key != "path" and actual.get(key) != value
+            }
+            if "path" in expected:
+                actual_path = [
+                    {key: node.get(key) for key in ("depth", "selected_dimension", "selected_segment", "local_contribution_pct", "global_contribution_pct", "stopping_reason")}
+                    for node in actual.get("investigation_path", [])
+                ]
+                if actual_path != expected["path"]:
+                    mismatches["path"] = {"expected": expected["path"], "actual": actual_path}
             results.append({"id": case["id"], "passed": not mismatches, "mismatches": mismatches})
     passed = sum(item["passed"] for item in results)
     return {"total": len(results), "passed": passed, "failed": len(results) - passed, "release_ready": passed == len(results), "results": results}

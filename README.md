@@ -49,6 +49,12 @@ Root-cause mode now turns an approved additive `segment_change` calculation into
 
 The opt-in Milestone 6 conclusion compiler converts completed investigation state into a deterministic, non-causal `InvestigationConclusion`. It preserves the selected path from the global KPI to the deepest defensible segment, retains the exact filter path, validates every test/evidence/verification reference, and records downstream blocks without erasing valid upstream findings. `readiness_status` means readiness to make a stronger descriptive explanatory claim; competing explanations, inconclusive results, and data-quality abstentions remain valid final outputs even when that status is not ready. The compiler performs no data loading, calculations, model calls, controller decisions, or verification work.
 
+### RCA API V1
+
+`POST /v1/rca/investigations` exposes the completed RCA engine through a stable public contract using an existing `dataset_id`. It is synchronous and creates a fresh investigation UUID for every execution. Public results contain KPI movement, exact source and target scopes, the selected path, target-scoped decomposition arithmetic, explanatory readiness, target-applicable robustness, controlled caveats and next actions, sanitized data-quality codes, and response-local evidence references. Internal agent state, prompts, provider output, file paths, raw rows, and internal evidence identifiers are never returned.
+
+Phase 1 product policy supports at most 12 approved candidate dimensions and fixes investigation depth at 3. Clients cannot override depth, evidence thresholds, coverage/null policies, reconciliation tolerances, verification thresholds, or enabled reasoning stages. Canonical period labels match the RCA engine: `YYYY-MM-DD` for day, `YYYY-MM-DD` for the engine's weekly start date, `YYYY-MM` for month, `YYYYQn` for quarter, and `YYYY` for year. This remains a single-workspace controlled-pilot API because uploaded datasets do not yet have tenant ownership boundaries.
+
 Revenue is the first governed business semantic contract: `SUM(net_revenue)` at order grain with explicit completed-order, refund, reporting-currency, timezone, and comparison policies. Exact field bindings are required. Missing or ambiguous required fields—and missing currency/timezone policy—produce an auditable abstention rather than a guessed metric.
 
 Release evaluation now combines the original 27 deterministic analytics cases with 10 answer-keyed RCA incidents covering detection, incident classification, driver/segment identification, contribution accuracy, hypothesis status, abstention, reconciliation, causal safety, and evidence traceability. The included RCA reference predictions calibrate the scorer; they are not represented as a production-agent accuracy claim.
@@ -130,6 +136,7 @@ npm run build
 - `GET /connectors/catalog` reports the five data-only, read-only Google sources and setup readiness.
 - `POST /connectors/preview` reads a bounded source preview without creating a dataset.
 - `POST /connectors/snapshot` creates a lineage-tagged dataset from an approved connector read.
+- `POST /v1/rca/investigations` runs a synchronous, governed V1 KPI investigation against one existing dataset.
 
 ## Current readiness
 

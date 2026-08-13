@@ -16,6 +16,7 @@ from app.services.hypothesis_planner import plan_hypotheses, update_hypothesis_s
 from app.services.investigation_controller import choose_next_action
 from app.services.investigation_conclusion import compile_investigation_conclusion
 from app.services.investigation_verifier import verify_investigation
+from app.services.period_labels import format_period_values
 
 from app.domain.root_cause_contracts import (
     AdditiveKPISemanticDefinition,
@@ -351,15 +352,7 @@ def investigate_root_cause(request: RCAInvestigationRequest) -> RCAInvestigation
     )
 
 
-def _period_values(values: pd.Series, grain: str) -> pd.Series:
-    if grain == "day":
-        return values.dt.strftime("%Y-%m-%d")
-    if grain == "week":
-        return values.dt.to_period("W").apply(
-            lambda item: str(item.start_time.date()) if not pd.isna(item) else None
-        )
-    frequency = {"month": "M", "quarter": "Q", "year": "Y"}[grain]
-    return values.dt.to_period(frequency).astype(str)
+_period_values = format_period_values
 
 
 def _next_evidence_id(existing: set[str]) -> str:

@@ -23,7 +23,7 @@ from app.models.schema import Session as SessionModel
 from app.services import progress as progress_bus
 from app.services.run_manager import run_manager
 
-from app.api.routers import agents, health, evaluations, datasets, sessions, artifacts, connectors
+from app.api.routers import agents, health, evaluations, datasets, sessions, artifacts, connectors, rca
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +126,7 @@ app.add_middleware(
 @app.middleware("http")
 async def request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+    request.state.request_id = request_id
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -143,3 +144,4 @@ app.include_router(sessions.router)
 app.include_router(artifacts.router)
 app.include_router(agents.router)
 app.include_router(connectors.router)
+app.include_router(rca.router)

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "robust_scoped_leader",
+    "dataset": "robust",
+    "provider_mode": "valid",
+    "expected": {"claim_type": "robust_descriptive_explanation", "leading_dimension": "country", "leading_segment": "Germany", "robustness_status": "robust_no_material_challenge"}
+  },
+  {
+    "id": "competing_explanations_are_not_unique",
+    "dataset": "competing",
+    "provider_mode": "valid",
+    "expected": {"claim_type": "competing_explanations", "readiness_status": "not_ready_competing_explanations", "robustness_status": "competing_explanations"}
+  },
+  {
+    "id": "large_remainder_weakens_claim",
+    "dataset": "remainder",
+    "provider_mode": "valid",
+    "expected": {"claim_type": "mathematical_observation", "readiness_status": "not_ready_insufficient_evidence", "robustness_status": "weakened"}
+  },
+  {
+    "id": "over_one_hundred_percent_with_offsets",
+    "dataset": "offset",
+    "provider_mode": "valid",
+    "expected": {"claim_type": "robust_descriptive_explanation", "robustness_status": "robust_with_caveats", "required_caveat": "material_offsets", "minimum_abs_contribution_pct": 100.0}
+  },
+  {
+    "id": "challenge_provider_fallback",
+    "dataset": "robust",
+    "provider_mode": "failure",
+    "parity_group": "provider-fallback",
+    "expected": {"claim_type": "robust_descriptive_explanation", "robustness_status": "robust_no_material_challenge", "fallback_reason": "provider_failure"}
+  },
+  {
+    "id": "challenge_provider_normal",
+    "dataset": "robust",
+    "provider_mode": "valid",
+    "parity_group": "provider-fallback",
+    "expected": {"claim_type": "robust_descriptive_explanation", "robustness_status": "robust_no_material_challenge"}
+  },
+  {
+    "id": "global_data_quality_abstention",
+    "dataset": "unsafe_global",
+    "provider_mode": "valid",
+    "expected": {"claim_type": "data_quality_abstention", "readiness_status": "not_ready_data_quality", "terminal_category": "blocked_by_data_quality"}
+  },
+  {
+    "id": "recursive_deepest_scope",
+    "dataset": "recursive",
+    "provider_mode": "none",
+    "maximum_depth": 3,
+    "controlled_mode": false,
+    "expected": {"claim_type": "leading_tested_contributor", "leading_dimension": "customer_type", "leading_segment": "Returning", "path_length": 4}
+  },
+  {
+    "id": "downstream_quality_preserves_upstream",
+    "dataset": "downstream_quality",
+    "provider_mode": "none",
+    "maximum_depth": 3,
+    "controlled_mode": false,
+    "expected": {"claim_type": "leading_tested_contributor", "leading_dimension": "device", "leading_segment": "Mobile", "terminal_category": "blocked_by_data_quality", "required_caveat": "downstream_scope_data_quality"}
+  },
+  {
+    "id": "no_material_candidate_abstains",
+    "dataset": "diffuse",
+    "provider_mode": "none",
+    "controlled_mode": false,
+    "material_contribution_pct": 60.0,
+    "expected": {"claim_type": "inconclusive", "readiness_status": "not_ready_insufficient_evidence", "terminal_category": "no_material_driver"}
+  }
+]

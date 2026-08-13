@@ -133,7 +133,7 @@ def test_unexplained_residual_is_preserved_and_forces_abstention():
     assert report.reconciliation.unexplained_pct == 40
     assert report.reconciliation.residual_within_tolerance is False
     assert report.conclusion.determination == "inconclusive"
-    assert any("unexplained movement" in item for item in report.next_investigations)
+    assert any("residual movement" in item for item in report.next_investigations)
 
 
 def test_overlapping_drivers_are_not_added_together():

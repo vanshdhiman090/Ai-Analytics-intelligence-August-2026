@@ -122,6 +122,59 @@ VerificationRobustnessStatus = Literal[
     "competing_explanations",
     "abstain",
 ]
+ConclusionClaimType = Literal[
+    "mathematical_observation",
+    "leading_tested_contributor",
+    "robust_descriptive_explanation",
+    "competing_explanations",
+    "inconclusive",
+    "data_quality_abstention",
+]
+ConclusionReadinessStatus = Literal[
+    "ready",
+    "ready_with_caveats",
+    "not_ready_incomplete_testing",
+    "not_ready_data_quality",
+    "not_ready_reconciliation",
+    "not_ready_competing_explanations",
+    "not_ready_insufficient_evidence",
+    "not_ready_verification_incomplete",
+]
+ConclusionTerminalCategory = Literal[
+    "completed",
+    "completed_with_caveats",
+    "inconclusive",
+    "blocked_by_data_quality",
+    "blocked_by_reconciliation",
+    "bounded_by_max_depth",
+    "no_material_driver",
+    "incomplete_testing",
+]
+ConclusionNextAction = Literal[
+    "none_required",
+    "inspect_competing_explanation",
+    "improve_data_quality",
+    "collect_more_data",
+    "expand_candidate_dimensions",
+    "increase_investigation_depth",
+    "review_large_offsets",
+    "complete_required_testing",
+    "repair_reconciliation",
+]
+ConclusionCaveatCode = Literal[
+    "material_offsets",
+    "leading_segment_remainder",
+    "competing_decomposition",
+    "maximum_depth_boundary",
+    "downstream_scope_data_quality",
+    "nonblocking_data_quality",
+    "insufficient_evidence",
+    "incomplete_testing",
+    "reconciliation_failure",
+    "verification_not_completed",
+    "no_material_driver",
+    "robustness_applies_to_upstream_scope_only",
+]
 
 
 class RCAContract(BaseModel):
@@ -389,6 +442,7 @@ class SingleLevelInvestigationRequest(RCAContract):
     hypothesis_planning_enabled: bool = False
     evidence_driven_control_enabled: bool = False
     self_falsification_enabled: bool = False
+    conclusion_compilation_enabled: bool = False
 
     @model_validator(mode="after")
     def periods_and_dimensions_must_be_distinct(self) -> "SingleLevelInvestigationRequest":
@@ -664,6 +718,152 @@ class InvestigationPathNode(RCAContract):
     stopping_reason: InvestigationStoppingReason | None = None
 
 
+class ConclusionTargetScope(RCAContract):
+    """Exact selected scope plus the parent scope that produced its evidence."""
+
+    source_scope_node_id: str = Field(pattern=r"^IN\d+$")
+    target_path_node_id: str | None = Field(default=None, pattern=r"^IN\d+$")
+    filter_path: tuple[InvestigationFilter, ...] = Field(default_factory=tuple)
+    target_dimension: str | None = None
+    target_segment: str | None = None
+
+
+class ConclusionReadinessChecks(RCAContract):
+    """Readiness for a stronger explanatory claim, not for returning a response."""
+
+    valid_kpi_movement: bool
+    exact_scope_data_quality_safe: bool
+    required_dimensions_tested: bool
+    reconciliation_passed: bool
+    leader_resolved: bool
+    evidence_sufficient: bool
+    verification_required: bool
+    verification_completed: bool
+    verification_applies_to_target: bool
+    execution_complete: bool
+    lineage_validated: bool
+
+
+class ConclusionStopDetail(RCAContract):
+    scope_node_id: str = Field(pattern=r"^IN\d+$")
+    filter_path: tuple[InvestigationFilter, ...] = Field(default_factory=tuple)
+    stopping_reason: InvestigationStoppingReason
+
+
+class InvestigationConclusion(RCAContract):
+    conclusion_id: str = Field(pattern=r"^ICL\d+$")
+    compiler_version: Literal["conclusion-compiler-v1"] = "conclusion-compiler-v1"
+    investigation_id: str = Field(min_length=1)
+    claim_type: ConclusionClaimType
+    readiness_status: ConclusionReadinessStatus
+    terminal_category: ConclusionTerminalCategory
+    kpi: AdditiveKPISemanticDefinition
+    baseline_period: str = Field(min_length=1)
+    comparison_period: str = Field(min_length=1)
+    target_scope: ConclusionTargetScope
+    conclusion_path_node_ids: tuple[str, ...] = Field(default_factory=tuple)
+    leading_dimension: str | None = None
+    leading_segment: str | None = None
+    signed_contribution: float | None = None
+    contribution_to_net_change_pct: float | None = None
+    evidence_strength: InvestigationEvidenceStrength
+    robustness_status: VerificationRobustnessStatus
+    verification_target_scope_node_id: str | None = Field(
+        default=None, pattern=r"^IN\d+$"
+    )
+    supporting_test_ids: tuple[str, ...] = Field(default_factory=tuple)
+    supporting_evidence_ids: tuple[str, ...] = Field(default_factory=tuple)
+    verification_ids: tuple[str, ...] = Field(default_factory=tuple)
+    caveat_codes: tuple[ConclusionCaveatCode, ...] = Field(default_factory=tuple)
+    source_stopping_reason: str = Field(min_length=1)
+    low_level_stops: tuple[ConclusionStopDetail, ...] = Field(default_factory=tuple)
+    readiness_checks: ConclusionReadinessChecks
+    recommended_next_action: ConclusionNextAction
+
+    @model_validator(mode="after")
+    def epistemic_compatibility_matrix(self) -> "InvestigationConclusion":
+        checks = self.readiness_checks
+        ready = self.readiness_status in {"ready", "ready_with_caveats"}
+        strongest = self.claim_type in {
+            "leading_tested_contributor",
+            "robust_descriptive_explanation",
+        }
+        if ready and not all(
+            (
+                checks.valid_kpi_movement,
+                checks.exact_scope_data_quality_safe,
+                checks.required_dimensions_tested,
+                checks.reconciliation_passed,
+                checks.leader_resolved,
+                checks.evidence_sufficient,
+                checks.execution_complete,
+                checks.lineage_validated,
+            )
+        ):
+            raise ValueError("Ready explanatory claims require every deterministic gate")
+        if strongest and not ready:
+            raise ValueError("Strongest-contributor claims require explanatory readiness")
+        if strongest and (not checks.required_dimensions_tested or not checks.reconciliation_passed):
+            raise ValueError("Incomplete or unreconciled analysis forbids strongest claims")
+        if strongest and self.evidence_strength not in {"strong", "moderate"}:
+            raise ValueError("Weak evidence cannot support a strongest-contributor claim")
+        if self.claim_type == "robust_descriptive_explanation":
+            if self.robustness_status not in {
+                "robust_no_material_challenge",
+                "robust_with_caveats",
+            }:
+                raise ValueError("Robust claim is incompatible with robustness status")
+            if not (
+                checks.verification_required
+                and checks.verification_completed
+                and checks.verification_applies_to_target
+            ):
+                raise ValueError("Robust claim requires completed target-scope verification")
+        if checks.verification_required and not checks.verification_completed and self.claim_type == "robust_descriptive_explanation":
+            raise ValueError("Requested but incomplete verification forbids robust claims")
+        if self.robustness_status == "competing_explanations" and self.claim_type != "competing_explanations":
+            raise ValueError("Competing robustness requires a competing-explanations claim")
+        if self.claim_type == "competing_explanations":
+            if self.robustness_status != "competing_explanations" or self.readiness_status != "not_ready_competing_explanations":
+                raise ValueError("Competing claim requires matching robustness and readiness")
+        if self.claim_type == "data_quality_abstention":
+            if checks.exact_scope_data_quality_safe:
+                raise ValueError("Data-quality abstention requires a blocking target-scope issue")
+            if self.readiness_status != "not_ready_data_quality" or self.terminal_category != "blocked_by_data_quality":
+                raise ValueError("Data-quality abstention requires matching readiness and terminal status")
+        if not checks.exact_scope_data_quality_safe and self.claim_type != "data_quality_abstention":
+            raise ValueError("Unsafe exact-target data requires a data-quality abstention")
+        if self.robustness_status in {
+            "robust_no_material_challenge",
+            "robust_with_caveats",
+        } and not checks.verification_completed:
+            raise ValueError("A robust status requires completed verification records")
+        if self.readiness_status == "not_ready_data_quality" and checks.exact_scope_data_quality_safe:
+            raise ValueError("Data-quality not-ready status requires an unsafe exact scope")
+        if self.readiness_status == "not_ready_reconciliation" and checks.reconciliation_passed:
+            raise ValueError("Reconciliation not-ready status requires reconciliation failure")
+        if self.readiness_status == "not_ready_incomplete_testing" and checks.required_dimensions_tested:
+            raise ValueError("Incomplete-testing status requires missing required tests")
+        if self.readiness_status == "not_ready_verification_incomplete" and not (
+            checks.verification_required and not checks.verification_completed
+        ):
+            raise ValueError("Verification-incomplete status requires unfinished requested verification")
+        if self.readiness_status == "not_ready_insufficient_evidence" and checks.evidence_sufficient:
+            raise ValueError("Insufficient-evidence status requires insufficient evidence")
+        if self.target_scope.target_path_node_id is not None:
+            if not self.conclusion_path_node_ids or self.conclusion_path_node_ids[-1] != self.target_scope.target_path_node_id:
+                raise ValueError("Conclusion path must terminate at the exact target node")
+        if len(self.conclusion_path_node_ids) != len(set(self.conclusion_path_node_ids)):
+            raise ValueError("Conclusion path node IDs must be unique")
+        if self.target_scope.filter_path and self.target_scope.target_dimension:
+            last = self.target_scope.filter_path[-1]
+            if last.dimension != self.target_scope.target_dimension or last.segment != self.target_scope.target_segment:
+                raise ValueError("Target identity must match the final filter-path step")
+        if self.claim_type not in {"inconclusive", "data_quality_abstention"} and not self.supporting_evidence_ids:
+            raise ValueError("A positive bounded claim requires supporting evidence")
+        return self
+
+
 class InvestigationState(RCAContract):
     investigation_id: str
     goal: str
@@ -703,3 +903,4 @@ class InvestigationState(RCAContract):
     verification_status: VerificationRobustnessStatus = "not_run"
     verification_evidence_strength: InvestigationEvidenceStrength = "insufficient"
     verification_rationale: str | None = None
+    final_conclusion: InvestigationConclusion | None = None

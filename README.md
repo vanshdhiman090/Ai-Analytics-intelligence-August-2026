@@ -45,7 +45,9 @@ Broad stage executors are wrapped by focused roles. For example, Analyze is sepa
 
 ### Root Cause Analytics V0
 
-Root-cause mode now turns an approved additive `segment_change` calculation into a typed investigation report. The deterministic engine verifies the incident and baseline, checks data health, ranks signed driver contributions, reconciles explained and unexplained movement, evaluates competing hypotheses and falsification checks, grades evidence strength, and abstains when the evidence is unsafe. Mathematical contribution is never presented as causal proof. Completed RCA projects expose a dedicated **Investigation** view alongside the normal evidence and audit views.
+Root-cause mode now turns an approved additive `segment_change` calculation into a typed investigation report. The deterministic engine verifies the incident and baseline, checks data health, ranks signed driver contributions, reconciles attributed and residual movement within the tested decomposition, evaluates competing hypotheses and falsification checks, grades evidence strength, and abstains when the evidence is unsafe. Mathematical contribution is never presented as causal proof. Completed RCA projects expose a dedicated **Investigation** view alongside the normal evidence and audit views.
+
+The opt-in Milestone 6 conclusion compiler converts completed investigation state into a deterministic, non-causal `InvestigationConclusion`. It preserves the selected path from the global KPI to the deepest defensible segment, retains the exact filter path, validates every test/evidence/verification reference, and records downstream blocks without erasing valid upstream findings. `readiness_status` means readiness to make a stronger descriptive explanatory claim; competing explanations, inconclusive results, and data-quality abstentions remain valid final outputs even when that status is not ready. The compiler performs no data loading, calculations, model calls, controller decisions, or verification work.
 
 Revenue is the first governed business semantic contract: `SUM(net_revenue)` at order grain with explicit completed-order, refund, reporting-currency, timezone, and comparison policies. Exact field bindings are required. Missing or ambiguous required fields—and missing currency/timezone policy—produce an auditable abstention rather than a guessed metric.
 
@@ -82,8 +84,10 @@ Backend tests:
 ```powershell
 cd backend
 $env:CHECKPOINT_BACKEND="memory"
-.\.venv\Scripts\python.exe -m pytest tests -q
+python -m pytest -q
 ```
+
+`backend/pytest.ini` explicitly limits maintained automated collection to `backend/tests`. The five historical files at the backend rootâ€”`test_analyze_node.py`, `test_full_pipeline.py`, `test_orchestrator.py`, `test_prepare_node.py`, and `test_process_node.py`â€”are manual/integration artifacts that depend on historical or external state. They are preserved, but they are not part of the maintained automated suite and are not described as passing tests. CI runs the same `cd backend` / `python -m pytest -q` maintained-suite command. Repository-root `pytest -q` is not claimed as a supported equivalent.
 
 Deterministic analytics evaluations:
 

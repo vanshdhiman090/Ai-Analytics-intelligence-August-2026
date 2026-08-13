@@ -14,6 +14,7 @@ from app.services.tabular import DateSemanticError, parse_date_series
 from app.services.comparison_context import extract_explicit_comparison_context
 from app.services.hypothesis_planner import plan_hypotheses, update_hypothesis_statuses
 from app.services.investigation_controller import choose_next_action
+from app.services.investigation_conclusion import compile_investigation_conclusion
 from app.services.investigation_verifier import verify_investigation
 
 from app.domain.root_cause_contracts import (
@@ -173,7 +174,7 @@ def _reconciliation(
         note=(
             "Driver changes reconcile to the observed incident movement."
             if within_tolerance
-            else "Driver changes do not fully reconcile; the residual remains explicitly unexplained."
+            else "Driver changes do not fully reconcile; the residual remains outside the supplied decomposition."
         ),
     )
 
@@ -252,7 +253,7 @@ def _conclusion(
     elif not reconciliation.reconcilable:
         reason = "The supplied drivers are overlapping or incomplete, so explained movement cannot be reconciled."
     elif reconciliation.residual_within_tolerance is not True:
-        reason = "The supplied driver decomposition leaves material unexplained movement."
+        reason = "The supplied driver decomposition leaves material residual movement outside that decomposition."
     elif primary.evidence_strength == "low":
         reason = "The leading mathematical driver has insufficient evidence quality."
     else:
@@ -312,7 +313,7 @@ def investigate_root_cause(request: RCAInvestigationRequest) -> RCAInvestigation
     if health.status in {"fail", "unknown", "caution"}:
         next_steps.append("Resolve or explicitly accept the recorded data-health limitations before escalation.")
     if reconciliation.reconcilable and reconciliation.residual_within_tolerance is False:
-        next_steps.append("Measure additional mutually exclusive drivers for the unexplained movement.")
+        next_steps.append("Measure additional mutually exclusive drivers for the residual movement.")
     if not reconciliation.reconcilable:
         next_steps.append("Provide a mutually exclusive, exhaustive driver decomposition.")
     if not hypotheses:
@@ -343,7 +344,7 @@ def investigate_root_cause(request: RCAInvestigationRequest) -> RCAInvestigation
             "Validated typed incident, evidence, and unique references.",
             "Assessed data health before interpreting business movement.",
             "Calculated absolute driver changes and signed contribution shares.",
-            "Reconciled explained and unexplained movement where partition-safe.",
+            "Reconciled attributed and residual movement where partition-safe.",
             "Evaluated competing hypotheses and recorded falsification outcomes.",
             "Applied causal-evidence and abstention gates.",
         ),
@@ -641,6 +642,13 @@ def run_single_level_investigation(
 ) -> InvestigationState:
     """Run the smallest real deterministic KPI investigation loop."""
     request = SingleLevelInvestigationRequest.model_validate(request)
+    if request.conclusion_compilation_enabled:
+        completed = run_single_level_investigation(
+            frame,
+            request.model_copy(update={"conclusion_compilation_enabled": False}),
+        )
+        conclusion = compile_investigation_conclusion(completed, request)
+        return completed.model_copy(update={"final_conclusion": conclusion})
     if request.self_falsification_enabled:
         provisional = run_single_level_investigation(
             frame,

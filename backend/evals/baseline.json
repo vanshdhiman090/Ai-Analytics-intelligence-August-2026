@@ -1,0 +1,6 @@
+{
+  "suite_version": "2.0",
+  "minimum_weighted_score": 1.0,
+  "minimum_category_score": 1.0,
+  "policy": "Every critical case and every evaluation layer must pass before release."
+}

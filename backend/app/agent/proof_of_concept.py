@@ -47,7 +47,7 @@ if __name__ == "__main__":
     config = {"configurable": {"thread_id": "test-session-1"}}
 
     print("=== First run: should PAUSE at the checkpoint ===")
-    result = app.invoke({"dataset_name": "Nike_Dataset.csv", "data_source_answer": ""}, config=config)
+    result = app.invoke({"dataset_name": "example_dataset.csv", "data_source_answer": ""}, config=config)
     print(f"Graph state after pause: {result}")
 
     state_snapshot = app.get_state(config)

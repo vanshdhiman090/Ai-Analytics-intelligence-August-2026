@@ -1,0 +1,17 @@
+{
+  "suite_version": "1.0",
+  "minimum_overall_score": 0.9,
+  "minimum_metric_scores": {
+    "anomaly_detection": 0.9,
+    "incident_classification": 1.0,
+    "primary_branch": 0.8,
+    "affected_segment": 0.8,
+    "contribution_accuracy": 0.9,
+    "hypothesis_status_accuracy": 0.8,
+    "correct_abstention": 1.0,
+    "explained_impact_reconciliation": 1.0,
+    "causal_claim_safety": 1.0,
+    "evidence_traceability": 1.0
+  },
+  "policy": "No critical incident may fail. Abstention, reconciliation, causal safety, and evidence traceability are fail-closed release metrics."
+}

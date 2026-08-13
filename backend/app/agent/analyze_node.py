@@ -1,151 +1,194 @@
-"""
-Milestone 3 — Analyze node, wired to the real database.
+"""Analyze phase: approve a coverage-checked plan, then calculate with controlled code."""
 
-Deliverable structure combines two sources:
-- Finding -> Business Implication pairing, with traceable IDs (Case Study 6
-  format — the difference between a report and a defensible argument).
-- "Analysis Summary" as its own narrative deliverable + "Additional
-  deliverables for further exploration" section (Case Study 3's specific
-  requirement for the open-ended path — not present in Bellabeat/Case Study 6).
+from __future__ import annotations
 
-Also applies Section 3.3 of the master plan as a standing rule, not a
-one-off: always check distribution shape before reporting a mean.
-"""
-
-import pandas as pd
+import json
 from typing import TypedDict
 
+from langgraph.types import interrupt
+from sqlalchemy import func
+
 from app.core.database import SessionLocal
-from app.models.schema import AgentAction
+from app.domain.contracts import AnalysisPlan, FindingSet
+from app.models.schema import AgentAction, Checkpoint
+from app.services.analysis import AnalysisPlanError, execute_plan, validate_question_coverage
+from app.services.llm import generate_structured
+from app.services.run_state import mark_stage
+from app.services.tabular import load_dataframe
+from app.services.progress import emit_sync
 
 
-class AnalyzeState(TypedDict):
+class AnalyzeState(TypedDict, total=False):
     session_id: str
     business_question: str
+    analysis_brief: dict
+    schema_profile: dict
+    cleaned_path: str
+    analysis_plan: dict
+    pending_analysis_checkpoint_id: str
+    analysis_plan_feedback: str
+    evidence: list
     findings: list
     analysis_summary: str
     additional_deliverables: list
 
 
-def check_distribution_shape(values: pd.Series) -> str:
-    """Section 3.3 standing rule: never report a mean without checking shape first."""
-    import numpy as np
-    arr = np.sort(values.dropna().to_numpy())
-    if len(arr) < 10:
-        return "insufficient data to assess shape"
-    gaps = np.diff(arr)
-    max_gap_idx = np.argmax(gaps)
-    relative_gap = gaps[max_gap_idx] / (arr[-1] - arr[0]) if arr[-1] != arr[0] else 0
-    left_mass = (max_gap_idx + 1) / len(arr)
-    if relative_gap > 0.4 and min(left_mass, 1 - left_mass) > 0.1:
-        return "bimodal — mean is misleading, report cluster split instead"
-    return "unimodal — mean is representative"
+def planner_prompt(state: AnalyzeState, validation_error: str | None = None) -> str:
+    correction = f"\nPrevious plan was rejected or needs revision: {validation_error}\nCorrect that issue." if validation_error else ""
+    return (
+        "Create a concise analysis plan that answers every explicit part of the confirmed question using only the "
+        "supplied columns. Every dataset column directly named in the question must appear in at least one operation. "
+        "Choose only these safe operations: summary, grouped_aggregate, trend, period_comparison, distribution, "
+        "outlier_analysis, correlation, kpi_ratio, statistical_comparison, segment_change. Use grouped_aggregate for segment comparisons and contributions; it returns "
+        "rank, sample count, and share of total when meaningful. Use trend for multi-period movement and "
+        "period_comparison for the latest period versus its prior observed period. Set time_grain to auto unless the "
+        "question specifies day, week, month, quarter, or year. Use distribution for spread, outlier_analysis only "
+        "when unusual observations matter, and correlation only for two numeric columns and never as causal proof. "
+        "Use kpi_ratio for rates calculated from an explicit numerator and denominator, never an average of row-level rates. "
+        "Use statistical_comparison only for two explicitly named groups and provide baseline_value and comparison_value. "
+        "Use segment_change when the question asks which segment drove movement between the latest two periods. "
+        "Every requested metric needs the correct aggregation and comparison baseline. Never invent columns, targets, "
+        "denominators, or business metrics. Prefer 2-6 non-duplicative operations that cover the question.\n\n"
+        f"Confirmed question: {state['business_question']}\n"
+        f"Analysis brief: {json.dumps(state.get('analysis_brief', {}), ensure_ascii=False)}\n"
+        f"User-selected analytical objectives: {json.dumps(state.get('analysis_objectives', []), ensure_ascii=False)}\n"
+        f"Dataset profile: {json.dumps(state['schema_profile'], ensure_ascii=False)}{correction}"
+    )
 
 
-def analyze_node(state: AnalyzeState) -> AnalyzeState:
+def _validated_plan(state: AnalyzeState, feedback: str | None = None) -> tuple[AnalysisPlan, list]:
+    frame = load_dataframe(state["cleaned_path"])
+    validation_error = feedback
+    for _ in range(3):
+        plan = generate_structured(planner_prompt(state, validation_error), AnalysisPlan)
+        try:
+            validate_question_coverage(frame, plan, state["business_question"])
+            return plan, execute_plan(frame, plan)
+        except AnalysisPlanError as exc:
+            validation_error = str(exc)
+    raise AnalysisPlanError(validation_error or "The analysis plan could not be executed")
+
+
+def _plan_question(plan: AnalysisPlan) -> str:
+    operations = "\n".join(
+        f"{item.operation_id}. {item.kind} | metric: {item.metric_column or 'n/a'} | "
+        f"dimension/time: {item.dimension_column or item.time_column or 'n/a'} | "
+        f"denominator: {item.denominator_column or 'n/a'} | {item.rationale}"
+        for item in plan.operations
+    )
+    coverage = "\n".join(f"- {item}" for item in plan.question_coverage)
+    return (
+        "Review the proposed analysis plan before calculations begin.\n\n"
+        f"Objective: {plan.objective}\n\nOperations:\n{operations}\n\nQuestion coverage:\n{coverage}\n\n"
+        "Type Confirm to approve, or describe the change you want. Requested changes will be validated against the dataset."
+    )
+
+
+def plan_analysis_node(state: AnalyzeState) -> AnalyzeState:
+    mark_stage(state["session_id"], "analyze")
+    emit_sync(state["session_id"], "analyze", "Generating and validating analysis plan…")
+    plan, _ = _validated_plan(state)
     db = SessionLocal()
     try:
-        df = pd.read_csv("/home/claude/nike_cleaned_v2.csv")
-        findings = []
-
-        # F1 — By Sales Method, with mandatory distribution-shape check
-        online_shape = check_distribution_shape(df[df["Sales Method"] == "Online"]["Discount Pct"])
-        by_method = df.groupby("Sales Method")["Discount Pct"].mean().round(2)
-        findings.append({
-            "id": "F1",
-            "finding": f"'Online' averages {by_method['Online']}% discount vs "
-                       f"'In-store' at {by_method['In-store']}%. Distribution check: {online_shape}.",
-            "implication": "The average alone is misleading for Online — it is a bimodal split "
-                            "(full-price vs. deep-discount clusters), not a gradual markdown pattern. "
-                            "See F3 for the correct framing." if "bimodal" in online_shape
-                            else "Average is representative here.",
-        })
-
-        # F2 — By Retailer
-        by_retailer = df.groupby("Retailer")["Discount Pct"].mean().round(2).sort_values(ascending=False)
-        findings.append({
-            "id": "F2",
-            "finding": f"'{by_retailer.index[0]}' shows the steepest average discount "
-                       f"({by_retailer.iloc[0]}%), '{by_retailer.index[-1]}' the smallest "
-                       f"({by_retailer.iloc[-1]}%).",
-            "implication": "Discount exposure isn't uniform across retail partners — worth "
-                            "checking against actual contract terms, not just transaction data.",
-        })
-
-        # F3 — The bimodal pattern itself, stated as its own finding
-        online = df[df["Sales Method"] == "Online"]["Discount Pct"]
-        near_zero_pct = (online < 5).mean() * 100
-        near_90_pct = ((online >= 85) & (online <= 95)).mean() * 100
-        findings.append({
-            "id": "F3",
-            "finding": f"Online discount is bimodal: {near_zero_pct:.1f}% of transactions near 0%, "
-                       f"{near_90_pct:.1f}% near 90%, with zero transactions between 10%-85%.",
-            "implication": "This gap-with-no-middle pattern is more consistent with a "
-                            "wholesale/retail reporting split in the data than organic customer "
-                            "discount behavior — likely a data-generation artifact.",
-        })
-
-        # F4 — Regional spread
-        by_region = df.groupby("Region")["Discount Pct"].mean().round(2)
-        spread = by_region.max() - by_region.min()
-        findings.append({
-            "id": "F4",
-            "finding": f"Regional averages range {by_region.min()}%-{by_region.max()}% "
-                       f"(spread of {spread:.2f} points).",
-            "implication": (
-                "Narrow spread suggests this is a channel/retailer dynamic, not a regional "
-                "pricing strategy." if spread < 3 else
-                "Spread is wide enough to suggest region-specific pricing or promotional "
-                "calendars may be a real factor, not just channel/retailer effects."
-            ),
-        })
-
-        # F5 — Time trend
-        df["Invoice Date"] = pd.to_datetime(df["Invoice Date"])
-        df["Quarter"] = df["Invoice Date"].dt.to_period("Q").astype(str)
-        by_quarter = df.groupby("Quarter")["Discount Pct"].mean().round(2)
-        trend = "decreased" if by_quarter.iloc[-1] < by_quarter.iloc[0] else "increased"
-        findings.append({
-            "id": "F5",
-            "finding": f"Discount gap {trend} from {by_quarter.iloc[0]}% to {by_quarter.iloc[-1]}% "
-                       f"over 2020-2021.",
-            "implication": f"Trend is {trend} but gradual — worth checking against known demand "
-                            f"events rather than assuming steady drift.",
-        })
-
-        analysis_summary = (
-            f"Analysis targeted the locked business question: {state['business_question']}. "
-            f"The dataset-wide average discount (54%) initially looked alarming, but distribution "
-            f"analysis (F3) revealed this is a bimodal pattern, not organic markdown behavior — "
-            f"most likely a data-reporting artifact rather than real business signal. This is the "
-            f"headline finding: the investigative process (catching a misleading average) is more "
-            f"valuable here than the raw number itself."
-        )
-
-        additional_deliverables = [
-            "Confirm with the original Kaggle source whether 'Total Sales' is defined differently "
-            "per sales channel — would fully resolve F3's remaining uncertainty.",
-            "If confirmed as real transactional data: investigate the West Gear + Online "
-            "combination specifically (highest discount exposure pairing, not yet isolated here).",
-            "Correlate the quarterly discount trend (F5) against known 2020-2021 demand events "
-            "(e.g. COVID-driven e-commerce shifts) rather than treating it as unexplained drift.",
-        ]
-
-        db.add(AgentAction(
-            session_id=state["session_id"],
-            stage="analyze",
-            action_type="statistical_analysis",
-            input_summary=f"Business question: {state['business_question']}",
-            output_summary=f"{len(findings)} findings generated, headline: F3 (bimodal pattern)",
-            code_executed="groupby Sales Method/Retailer/Region/Quarter on Discount Pct, "
-                           "distribution shape check via gap-detection",
-        ))
+        checkpoint = Checkpoint(session_id=state["session_id"], stage="analyze", question=_plan_question(plan))
+        db.add(checkpoint)
         db.commit()
-
         return {
-            "findings": findings,
-            "analysis_summary": analysis_summary,
-            "additional_deliverables": additional_deliverables,
+            "analysis_plan": plan.model_dump(mode="json"),
+            "pending_analysis_checkpoint_id": str(checkpoint.id),
         }
     finally:
         db.close()
+
+
+def approve_analysis_plan_node(state: AnalyzeState) -> AnalyzeState:
+    answer = interrupt(
+        {
+            "stage": "analyze",
+            "question": _plan_question(AnalysisPlan.model_validate(state["analysis_plan"])),
+            "pending_checkpoint_id": state["pending_analysis_checkpoint_id"],
+        }
+    )
+    db = SessionLocal()
+    try:
+        checkpoint = db.query(Checkpoint).filter(Checkpoint.id == state["pending_analysis_checkpoint_id"]).first()
+        if checkpoint is None:
+            raise RuntimeError("Analysis-plan checkpoint no longer exists")
+        checkpoint.answer = answer
+        checkpoint.resolved_at = func.now()
+        db.commit()
+    finally:
+        db.close()
+    return {"analysis_plan_feedback": answer}
+
+
+def validate_finding_citations(findings: FindingSet, evidence_ids: set[str]) -> None:
+    for finding in findings.findings:
+        unknown = set(finding.evidence_ids) - evidence_ids
+        if unknown:
+            raise ValueError(f"Finding {finding.finding_id} cites unknown evidence: {sorted(unknown)}")
+
+
+def calibrate_finding_confidence(findings: FindingSet, evidence: list) -> FindingSet:
+    """Prevent prose confidence from exceeding the quality of its cited calculations."""
+    quality = {item.evidence_id: item.quality_status for item in evidence}
+    for finding in findings.findings:
+        cited = [quality.get(evidence_id, "insufficient") for evidence_id in finding.evidence_ids]
+        if "insufficient" in cited:
+            finding.confidence = "low"
+            finding.caveats.append("At least one cited calculation has insufficient analytical support")
+        elif "caution" in cited and finding.confidence == "high":
+            finding.confidence = "medium"
+            finding.caveats.append("Confidence capped because at least one cited calculation requires caution")
+    return findings
+
+
+def analyze_node(state: AnalyzeState) -> AnalyzeState:
+    mark_stage(state["session_id"], "analyze")
+    emit_sync(state["session_id"], "analyze", "Running approved statistical operations…")
+    feedback = (state.get("analysis_plan_feedback") or "Confirm").strip()
+    if feedback.lower() in {"confirm", "confirmed", "approve", "approved", "yes"}:
+        plan = AnalysisPlan.model_validate(state["analysis_plan"])
+        frame = load_dataframe(state["cleaned_path"])
+        validate_question_coverage(frame, plan, state["business_question"])
+        evidence = execute_plan(frame, plan)
+    else:
+        plan, evidence = _validated_plan(state, f"Human requested these plan changes: {feedback}")
+
+    evidence_payload = [item.model_dump(mode="json") for item in evidence]
+    findings_prompt = (
+        "Write evidence-grounded findings that address every covered part of the confirmed question. Every finding "
+        "must cite supplied evidence IDs and use only values present in the evidence. Interpret rank, contribution, "
+        "change, sample size, uncertainty, and concentration only when those fields are present. Respect quality_status "
+        "and caveats: exploratory or small-sample evidence cannot support high-confidence claims. Do not create causal "
+        "explanations, benchmarks, targets, or external facts. Separate observed patterns from possible explanations and "
+        "explicitly list any still-unanswered part of the question.\n\n"
+        f"Question: {state['business_question']}\nEvidence: {json.dumps(evidence_payload, ensure_ascii=False)}"
+    )
+    finding_set = generate_structured(findings_prompt, FindingSet)
+    validate_finding_citations(finding_set, {item.evidence_id for item in evidence})
+    finding_set = calibrate_finding_confidence(finding_set, evidence)
+
+    db = SessionLocal()
+    try:
+        db.add(
+            AgentAction(
+                session_id=state["session_id"],
+                stage="analyze",
+                action_type="approved_statistical_analysis",
+                input_summary=f"Business question: {state['business_question']}",
+                output_summary=f"Executed {len(plan.operations)} approved operations and produced {len(finding_set.findings)} evidence-linked findings",
+                code_executed="Allow-listed analysis executor; no model-authored code",
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    return {
+        "analysis_plan": plan.model_dump(mode="json"),
+        "evidence": evidence_payload,
+        "findings": [item.model_dump(mode="json") for item in finding_set.findings],
+        "analysis_summary": finding_set.summary,
+        "additional_deliverables": finding_set.unanswered_questions,
+    }

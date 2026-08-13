@@ -3,10 +3,10 @@
 const STAGES = ["ask", "prepare", "process", "analyze", "share", "act"];
 
 export default function PipelineTracker({ currentStage, status }) {
-  const currentIndex = STAGES.indexOf(currentStage);
+  const currentIndex = ["complete", "package"].includes(currentStage) ? STAGES.length : Math.max(STAGES.indexOf(currentStage), 0);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", padding: "24px 0" }}>
+    <div><div style={{ display: "flex", alignItems: "center", padding: "24px 0" }}>
       {STAGES.map((stage, i) => {
         const isDone = i < currentIndex || (i === currentIndex && status === "complete");
         const isCurrent = i === currentIndex && status !== "complete";
@@ -52,6 +52,6 @@ export default function PipelineTracker({ currentStage, status }) {
           </div>
         );
       })}
-    </div>
+    </div>{currentStage === "package" && <div className="mono" style={{ marginTop: -10, marginBottom: 14, color: "var(--teal)", fontSize: 10, textAlign: "right", textTransform: "uppercase", letterSpacing: ".06em" }}>Six phases complete · validating and packaging documents</div>}</div>
   );
 }

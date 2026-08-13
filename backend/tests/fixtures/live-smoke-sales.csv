@@ -1,0 +1,13 @@
+order_date,region,channel,revenue,units
+2026-01-05,North,Online,1200,24
+2026-01-12,South,Store,900,20
+2026-01-19,North,Store,1100,22
+2026-02-03,South,Online,1300,25
+2026-02-10,North,Online,1500,28
+2026-02-17,South,Store,950,19
+2026-03-02,North,Store,1600,30
+2026-03-09,South,Online,1450,27
+2026-03-16,North,Online,1750,32
+2026-04-04,South,Store,1050,21
+2026-04-11,North,Store,1800,34
+2026-04-18,South,Online,1650,31

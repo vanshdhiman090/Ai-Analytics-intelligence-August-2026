@@ -1,111 +1,145 @@
-"""
-API layer — exposes the LangGraph pipeline over HTTP. Thin by design: this
-layer's only job is to relay requests to the orchestrator and expose state,
-per the architecture decision in the master plan (Section 6). All real
-logic stays in the agent nodes.
+"""Application factory — wires routers, middleware, lifespan, and background tasks.
+
+All route logic now lives in app/api/routers/*.
 """
 
-import sys
-sys.path.insert(0, "/home/claude/ai-analytics-workspace/backend")
+from __future__ import annotations
 
+import asyncio
+import logging
 import uuid
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from langgraph.types import Command
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import func, text
+
+from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models.schema import Session as SessionModel, Checkpoint, AgentAction, Artifact
-from app.agent.orchestrator import app as pipeline
+from app.models.schema import Dataset
+from app.models.schema import Session as SessionModel
+from app.services import progress as progress_bus
+from app.services.run_manager import run_manager
 
-app = FastAPI(title="AI Analytics Workspace API")
+from app.api.routers import agents, health, evaluations, datasets, sessions, artifacts, connectors
 
-
-class CreateSessionRequest(BaseModel):
-    file_path: str
-    rough_prompt: str
-    business_question: str
+logger = logging.getLogger(__name__)
 
 
-class CheckpointAnswer(BaseModel):
-    answer: str
+# ── Background tasks ────────────────────────────────────────────────────────
 
+async def _cleanup_old_files() -> None:
+    """Delete uploaded/cleaned files for finished sessions older than FILE_TTL_DAYS.
 
-@app.post("/sessions")
-def create_session(req: CreateSessionRequest):
+    Runs once per hour. Only removes files for sessions in 'complete' or 'error'
+    status — never touches files belonging to active or paused sessions.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.FILE_TTL_DAYS)
     db = SessionLocal()
     try:
-        session_row = SessionModel(user_id=uuid.uuid4(), status="active", current_stage="prepare")
-        db.add(session_row)
-        db.commit()
-        session_id = str(session_row.id)
-
-        config = {"configurable": {"thread_id": session_id}}
-        result = pipeline.invoke(
-            {"session_id": session_id, "file_path": req.file_path,
-             "rough_prompt": req.rough_prompt, "business_question": req.business_question},
-            config=config,
+        old_datasets = (
+            db.query(Dataset)
+            .join(SessionModel, Dataset.session_id == SessionModel.id)
+            .filter(
+                SessionModel.status.in_(["complete", "error"]),
+                SessionModel.updated_at < cutoff,
+            )
+            .all()
         )
-
-        paused = result.get("__interrupt__") is not None
-        session_row.status = "paused_for_input" if paused else "complete"
-        db.commit()
-
-        return {
-            "session_id": session_id,
-            "status": session_row.status,
-            "checkpoint": result.get("__interrupt__")[0].value if paused else None,
-        }
+        removed = 0
+        for dataset in old_datasets:
+            path = Path(dataset.file_path)
+            if path.exists():
+                path.unlink(missing_ok=True)
+                removed += 1
+        if removed:
+            logger.info("File cleanup: removed %d file(s) older than %d days", removed, settings.FILE_TTL_DAYS)
+    except Exception:
+        logger.exception("File cleanup task failed")
     finally:
         db.close()
 
 
-@app.post("/sessions/{session_id}/resume")
-def resume_session(session_id: str, body: CheckpointAnswer):
-    config = {"configurable": {"thread_id": session_id}}
-    result = pipeline.invoke(Command(resume=body.answer), config=config)
+async def _cleanup_loop() -> None:
+    """Run file cleanup every hour indefinitely."""
+    while True:
+        await asyncio.sleep(3600)
+        await _cleanup_old_files()
 
-    still_paused = result.get("__interrupt__") is not None
 
+# ── Lifespan ────────────────────────────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    settings.validate()
+
+    # Register the running event loop with the SSE progress bus so worker
+    # threads can schedule events onto it.
+    progress_bus.set_event_loop(asyncio.get_event_loop())
+
+    # Mark any sessions that were interrupted by a previous crash as failed.
     db = SessionLocal()
     try:
-        session_row = db.query(SessionModel).filter(SessionModel.id == session_id).first()
-        if not session_row:
-            raise HTTPException(404, "Session not found")
-
-        session_row.status = "paused_for_input" if still_paused else "complete"
-        session_row.current_stage = "complete" if not still_paused else session_row.current_stage
+        interrupted = (
+            db.query(SessionModel)
+            .filter(SessionModel.status.in_(["queued", "running", "active"]))
+            .all()
+        )
+        for session in interrupted:
+            session.status = "error"
+            session.error_message = (
+                "The previous process stopped before this run finished. Retry is available."
+            )
+            session.updated_at = func.now()
         db.commit()
-
-        return {
-            "session_id": session_id,
-            "status": session_row.status,
-            "checkpoint": result.get("__interrupt__")[0].value if still_paused else None,
-            "findings_count": len(result.get("findings", [])) if not still_paused else None,
-            "recommendations_count": len(result.get("recommendations", [])) if not still_paused else None,
-        }
     finally:
         db.close()
 
+    # Start the hourly file cleanup background task.
+    cleanup_task = asyncio.create_task(_cleanup_loop())
 
-@app.get("/sessions/{session_id}")
-def get_session(session_id: str):
-    db = SessionLocal()
-    try:
-        session_row = db.query(SessionModel).filter(SessionModel.id == session_id).first()
-        if not session_row:
-            raise HTTPException(404, "Session not found")
-        checkpoints = db.query(Checkpoint).filter(Checkpoint.session_id == session_id).all()
-        actions = db.query(AgentAction).filter(AgentAction.session_id == session_id).all()
-        artifacts = db.query(Artifact).filter(Artifact.session_id == session_id).all()
+    yield
 
-        return {
-            "session_id": session_id,
-            "status": session_row.status,
-            "current_stage": session_row.current_stage,
-            "business_task": session_row.business_task,
-            "checkpoints": [{"stage": c.stage, "question": c.question, "answer": c.answer} for c in checkpoints],
-            "actions": [{"stage": a.stage, "type": a.action_type} for a in actions],
-            "artifacts": [{"type": ar.type, "path": ar.file_path} for ar in artifacts],
-        }
-    finally:
-        db.close()
+    cleanup_task.cancel()
+    run_manager.shutdown()
+
+
+# ── App factory ─────────────────────────────────────────────────────────────
+
+app = FastAPI(
+    title="AI Analytics Workspace API",
+    version="0.4.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Request-ID", "X-API-Key"],
+    expose_headers=["X-Request-ID"],
+)
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+# ── Register routers ────────────────────────────────────────────────────────
+app.include_router(health.router)
+app.include_router(evaluations.router)
+app.include_router(datasets.router)
+app.include_router(sessions.router)
+app.include_router(artifacts.router)
+app.include_router(agents.router)
+app.include_router(connectors.router)

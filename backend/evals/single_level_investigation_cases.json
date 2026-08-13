@@ -1,0 +1,23 @@
+[
+  {
+    "id": "SLI-001",
+    "request": {"investigation_id": "SLI-001", "goal": "Investigate revenue decline", "kpi": {"metric_name": "Revenue", "metric_column": "revenue", "time_column": "date", "aggregation": "sum", "time_grain": "month", "unit": "EUR"}, "baseline_period": "2026-01", "comparison_period": "2026-02", "candidate_dimensions": ["country", "channel"]},
+    "rows": [
+      {"date":"2026-01-01","country":"Germany","channel":"Online","revenue":300},{"date":"2026-01-01","country":"Germany","channel":"Retail","revenue":300},{"date":"2026-01-01","country":"France","channel":"Online","revenue":100},{"date":"2026-01-01","country":"France","channel":"Retail","revenue":100},{"date":"2026-01-01","country":"UK","channel":"Online","revenue":100},{"date":"2026-01-01","country":"UK","channel":"Retail","revenue":100},
+      {"date":"2026-02-01","country":"Germany","channel":"Online","revenue":260},{"date":"2026-02-01","country":"Germany","channel":"Retail","revenue":260},{"date":"2026-02-01","country":"France","channel":"Online","revenue":125},{"date":"2026-02-01","country":"France","channel":"Retail","revenue":125},{"date":"2026-02-01","country":"UK","channel":"Online","revenue":65},{"date":"2026-02-01","country":"UK","channel":"Retail","revenue":65}
+    ],
+    "expected": {"outcome":"strongest_supported_driver", "leading_dimension":"country", "leading_segment":"Germany", "net_kpi_movement":-100, "downward_pressure":-150, "positive_offset":50}
+  },
+  {
+    "id": "SLI-002",
+    "request": {"investigation_id": "SLI-002", "goal": "Investigate revenue decline", "kpi": {"metric_name": "Revenue", "metric_column": "revenue", "time_column": "date", "aggregation": "sum", "time_grain": "month"}, "baseline_period": "2026-01", "comparison_period": "2026-02", "candidate_dimensions": ["country"]},
+    "rows": [{"date":"2026-01-01","country":"Germany","revenue":50},{"date":"2026-01-01","country":"France","revenue":50},{"date":"2026-02-01","country":"Germany","revenue":40},{"date":"2026-02-01","country":"France","revenue":null}],
+    "expected": {"outcome":"data_quality_incident"}
+  },
+  {
+    "id": "SLI-003",
+    "request": {"investigation_id": "SLI-003", "goal": "Investigate revenue decline", "kpi": {"metric_name": "Revenue", "metric_column": "revenue", "time_column": "date", "aggregation": "sum", "time_grain": "month"}, "baseline_period": "2026-01", "comparison_period": "2026-02", "candidate_dimensions": ["region"]},
+    "rows": [{"date":"2026-01-01","region":"R1","revenue":100},{"date":"2026-02-01","region":"R1","revenue":90},{"date":"2026-01-01","region":"R2","revenue":100},{"date":"2026-02-01","region":"R2","revenue":90},{"date":"2026-01-01","region":"R3","revenue":100},{"date":"2026-02-01","region":"R3","revenue":90},{"date":"2026-01-01","region":"R4","revenue":100},{"date":"2026-02-01","region":"R4","revenue":90},{"date":"2026-01-01","region":"R5","revenue":100},{"date":"2026-02-01","region":"R5","revenue":90},{"date":"2026-01-01","region":"R6","revenue":100},{"date":"2026-02-01","region":"R6","revenue":90},{"date":"2026-01-01","region":"R7","revenue":100},{"date":"2026-02-01","region":"R7","revenue":90},{"date":"2026-01-01","region":"R8","revenue":100},{"date":"2026-02-01","region":"R8","revenue":90},{"date":"2026-01-01","region":"R9","revenue":100},{"date":"2026-02-01","region":"R9","revenue":90},{"date":"2026-01-01","region":"R10","revenue":100},{"date":"2026-02-01","region":"R10","revenue":90}],
+    "expected": {"outcome":"inconclusive", "evidence_strength":"weak"}
+  }
+]

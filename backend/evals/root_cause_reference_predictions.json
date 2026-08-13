@@ -1,0 +1,140 @@
+{
+  "suite_version": "1.0",
+  "description": "Known-good scorer calibration fixture. This is not a measured production-agent result.",
+  "predictions": [
+    {
+      "case_id": "RCA-001", "is_anomaly": true, "incident_type": "business_incident",
+      "primary_branches": ["conversion"], "affected_segments": [{"country": "Germany", "device": "mobile"}],
+      "contributions": [{"driver_id": "germany_mobile_payment_failures", "absolute_impact": -6000, "evidence_ids": ["E1", "E2"]}],
+      "hypotheses": [
+        {"hypothesis_id": "payment_failure", "status": "supported", "statement": "Payment failures are the strongest supported contributing mechanism.", "evidence_ids": ["E2", "E3"]},
+        {"hypothesis_id": "traffic_decline", "status": "rejected", "statement": "Traffic decline is inconsistent with the observed visits.", "evidence_ids": ["E1"]}
+      ],
+      "abstained": false,
+      "reconciliation": {"total_movement": -10000, "explained_movement": -8000, "unexplained_movement": -2000},
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}, {"evidence_id": "E3"}],
+      "findings": [{"finding_id": "F1", "statement": "Germany mobile payment failures contributed 6000 of the observed revenue decline.", "evidence_ids": ["E1", "E2", "E3"]}],
+      "conclusion": "The conversion branch and Germany mobile segment explain most, but not all, of the observed movement."
+    },
+    {
+      "case_id": "RCA-002", "is_anomaly": true, "incident_type": "business_incident",
+      "primary_branches": ["order_volume"], "affected_segments": [{"product": "SKU-42"}],
+      "contributions": [{"driver_id": "sku_42_stockout", "absolute_impact": -15000, "evidence_ids": ["E1", "E2"]}],
+      "hypotheses": [
+        {"hypothesis_id": "stockout", "status": "supported", "statement": "The SKU-42 stock-out is the strongest supported contributing mechanism.", "evidence_ids": ["E2", "E3"]},
+        {"hypothesis_id": "price_change", "status": "rejected", "statement": "Recorded prices were stable.", "evidence_ids": ["E1"]}
+      ],
+      "abstained": false,
+      "reconciliation": {"total_movement": -20000, "explained_movement": -15000, "unexplained_movement": -5000},
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}, {"evidence_id": "E3"}],
+      "findings": [{"finding_id": "F1", "statement": "SKU-42 order-volume loss contributed 15000 of the observed revenue decline.", "evidence_ids": ["E1", "E2", "E3"]}],
+      "conclusion": "The order-volume branch and SKU-42 segment explain 15000 of the 20000 movement."
+    },
+    {
+      "case_id": "RCA-003", "is_anomaly": true, "incident_type": "business_incident",
+      "primary_branches": ["conversion"], "affected_segments": [{"channel": "paid_social"}],
+      "contributions": [{"driver_id": "paid_social_conversion_decline", "absolute_impact": -800, "evidence_ids": ["E1", "E2"]}],
+      "hypotheses": [
+        {"hypothesis_id": "low_intent_traffic", "status": "supported", "statement": "Lower-intent paid-social traffic is associated with the conversion deterioration.", "evidence_ids": ["E2", "E3"]},
+        {"hypothesis_id": "checkout_failure", "status": "rejected", "statement": "Checkout health does not deteriorate in the incident window.", "evidence_ids": ["E1"]}
+      ],
+      "abstained": false,
+      "reconciliation": {"total_movement": -1000, "explained_movement": -800, "unexplained_movement": -200},
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}, {"evidence_id": "E3"}],
+      "findings": [{"finding_id": "F1", "statement": "Paid-social conversion deterioration contributed 800 fewer orders.", "evidence_ids": ["E1", "E2", "E3"]}],
+      "conclusion": "Paid-social conversion is the primary mathematical driver; 200 orders remain unexplained."
+    },
+    {
+      "case_id": "RCA-004", "is_anomaly": true, "incident_type": "business_incident",
+      "primary_branches": ["average_order_value"], "affected_segments": [{"order_type": "discounted"}],
+      "contributions": [{"driver_id": "discount_mix_shift", "absolute_impact": -120000, "evidence_ids": ["E1", "E2"]}],
+      "hypotheses": [
+        {"hypothesis_id": "discount_mix_shift", "status": "supported", "statement": "A discount-mix shift is the strongest supported mechanism for lower AOV.", "evidence_ids": ["E2", "E3"]},
+        {"hypothesis_id": "units_per_order_decline", "status": "rejected", "statement": "Units per order remained stable.", "evidence_ids": ["E1"]}
+      ],
+      "abstained": false,
+      "reconciliation": {"total_movement": -150000, "explained_movement": -120000, "unexplained_movement": -30000},
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}, {"evidence_id": "E3"}],
+      "findings": [{"finding_id": "F1", "statement": "The discounted-order mix contributed 120000 of the observed revenue decline.", "evidence_ids": ["E1", "E2", "E3"]}],
+      "conclusion": "Average order value is the primary branch; the measured discount mix explains 120000 of the decline."
+    },
+    {
+      "case_id": "RCA-005", "is_anomaly": true, "incident_type": "data_incident",
+      "primary_branches": [], "affected_segments": [], "contributions": [],
+      "hypotheses": [
+        {"hypothesis_id": "ingestion_failure", "status": "supported", "statement": "Missing source partitions are supported as a reporting-data incident.", "evidence_ids": ["E1", "E2"]},
+        {"hypothesis_id": "business_demand_decline", "status": "unresolved", "statement": "Business demand cannot be assessed from the incomplete analytical table.", "evidence_ids": ["E1"]}
+      ],
+      "abstained": true, "reconciliation": null,
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}],
+      "findings": [{"finding_id": "F1", "statement": "The reported drop is not safe to interpret as a business decline while ingestion is incomplete.", "evidence_ids": ["E1", "E2"]}],
+      "conclusion": "I cannot determine the business root cause from the available evidence; restore and reconcile ingestion first."
+    },
+    {
+      "case_id": "RCA-006", "is_anomaly": false, "incident_type": "normal_variation",
+      "primary_branches": [], "affected_segments": [], "contributions": [],
+      "hypotheses": [{"hypothesis_id": "weekend_seasonality", "status": "supported", "statement": "The movement matches the historical weekend pattern.", "evidence_ids": ["E1", "E2"]}],
+      "abstained": false, "reconciliation": null,
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}],
+      "findings": [{"finding_id": "F1", "statement": "The Saturday value remains inside the historical weekend range.", "evidence_ids": ["E1", "E2"]}],
+      "conclusion": "No abnormal incident is supported after calendar-aware comparison."
+    },
+    {
+      "case_id": "RCA-007", "is_anomaly": true, "incident_type": "business_incident",
+      "primary_branches": ["traffic"], "affected_segments": [{"channel": "promotion"}],
+      "contributions": [{"driver_id": "promotion_end", "absolute_impact": -40000, "evidence_ids": ["E1", "E2"]}],
+      "hypotheses": [
+        {"hypothesis_id": "promotion_end", "status": "supported", "statement": "The randomized holdout shows the promotion ending caused the measured incremental traffic loss.", "evidence_ids": ["E2", "E3"]},
+        {"hypothesis_id": "site_outage", "status": "rejected", "statement": "Availability remained stable.", "evidence_ids": ["E1"]}
+      ],
+      "abstained": false,
+      "reconciliation": {"total_movement": -45000, "explained_movement": -40000, "unexplained_movement": -5000},
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}, {"evidence_id": "E3"}],
+      "findings": [{"finding_id": "F1", "statement": "The randomized comparison attributes 40000 of the decline to the promotion ending.", "evidence_ids": ["E1", "E2", "E3"]}],
+      "conclusion": "The experiment supports a causal promotion effect of 40000; 5000 remains unexplained."
+    },
+    {
+      "case_id": "RCA-008", "is_anomaly": true, "incident_type": "business_incident",
+      "primary_branches": ["traffic", "average_order_value"],
+      "affected_segments": [{"channel": "email"}, {"product_category": "Accessories"}],
+      "contributions": [
+        {"driver_id": "email_traffic_decline", "absolute_impact": -7000, "evidence_ids": ["E1", "E2"]},
+        {"driver_id": "accessories_aov_decline", "absolute_impact": -3000, "evidence_ids": ["E2", "E3"]}
+      ],
+      "hypotheses": [
+        {"hypothesis_id": "email_delivery_drop", "status": "supported", "statement": "Lower email delivery is associated with the measured traffic loss.", "evidence_ids": ["E1", "E4"]},
+        {"hypothesis_id": "accessories_discount_mix", "status": "partially_supported", "statement": "Discount mix explains part of lower accessories AOV.", "evidence_ids": ["E2", "E3"]},
+        {"hypothesis_id": "payment_failure", "status": "rejected", "statement": "Payment success remained stable.", "evidence_ids": ["E4"]}
+      ],
+      "abstained": false,
+      "reconciliation": {"total_movement": -12000, "explained_movement": -10000, "unexplained_movement": -2000},
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}, {"evidence_id": "E3"}, {"evidence_id": "E4"}],
+      "findings": [{"finding_id": "F1", "statement": "Email traffic and accessories AOV jointly contribute 10000 of the observed decline.", "evidence_ids": ["E1", "E2", "E3", "E4"]}],
+      "conclusion": "Two measured branches explain 10000; the remaining 2000 is preserved as unexplained."
+    },
+    {
+      "case_id": "RCA-009", "is_anomaly": false, "incident_type": "normal_variation",
+      "primary_branches": [], "affected_segments": [], "contributions": [],
+      "hypotheses": [
+        {"hypothesis_id": "business_incident", "status": "rejected", "statement": "The equal-window comparison does not support an abnormal business incident.", "evidence_ids": ["E1"]},
+        {"hypothesis_id": "normal_volatility", "status": "supported", "statement": "The movement is inside the historical interval.", "evidence_ids": ["E1", "E2"]}
+      ],
+      "abstained": true, "reconciliation": null,
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}],
+      "findings": [{"finding_id": "F1", "statement": "The apparent anomaly disappears after comparable-window adjustment.", "evidence_ids": ["E1", "E2"]}],
+      "conclusion": "I cannot assign a root cause because the evidence does not establish an anomaly."
+    },
+    {
+      "case_id": "RCA-010", "is_anomaly": null, "incident_type": "insufficient_evidence",
+      "primary_branches": [], "affected_segments": [], "contributions": [],
+      "hypotheses": [
+        {"hypothesis_id": "demand_decline", "status": "unresolved", "statement": "No valid baseline or demand dimension is available.", "evidence_ids": ["E1"]},
+        {"hypothesis_id": "tracking_change", "status": "unresolved", "statement": "Tracking-change evidence is unavailable.", "evidence_ids": ["E2"]}
+      ],
+      "abstained": true, "reconciliation": null,
+      "evidence": [{"evidence_id": "E1"}, {"evidence_id": "E2"}],
+      "findings": [{"finding_id": "F1", "statement": "The available data cannot distinguish the competing explanations.", "evidence_ids": ["E1", "E2"]}],
+      "conclusion": "I cannot determine the root cause from the available evidence; obtain a valid baseline and diagnostic dimensions."
+    }
+  ]
+}

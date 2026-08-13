@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Text, TIMESTAMP, ForeignKey, func
+from sqlalchemy import Column, String, Integer, Text, TIMESTAMP, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import declarative_base
 
@@ -12,7 +12,14 @@ class Session(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False)
     business_task = Column(Text)
     current_stage = Column(Text, nullable=False, default="ask")
+    workflow_mode = Column(Text, nullable=False, default="fast")
     status = Column(Text, nullable=False, default="active")
+    run_input = Column(JSONB)
+    result_summary = Column(JSONB)
+    error_message = Column(Text)
+    run_attempt = Column(Integer, nullable=False, default=0)
+    started_at = Column(TIMESTAMP(timezone=True))
+    completed_at = Column(TIMESTAMP(timezone=True))
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
@@ -23,6 +30,9 @@ class Dataset(Base):
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"))
     file_path = Column(Text, nullable=False)
     original_filename = Column(Text)
+    content_type = Column(Text)
+    size_bytes = Column(Integer)
+    sha256 = Column(String(64))
     schema_profile = Column(JSONB)
     row_count = Column(Integer)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
@@ -51,6 +61,27 @@ class AgentAction(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
+class AgentMemory(Base):
+    __tablename__ = "agent_memories"
+    __table_args__ = (
+        UniqueConstraint("scope_key", "specialist_name", "stage", "error_fingerprint", name="uq_agent_memory_signature"),
+    )
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+    scope_key = Column(Text, nullable=False)
+    manager_name = Column(Text, nullable=False)
+    specialist_name = Column(Text, nullable=False)
+    stage = Column(Text, nullable=False)
+    error_fingerprint = Column(String(64), nullable=False)
+    error_summary = Column(Text, nullable=False)
+    guidance = Column(Text, nullable=False)
+    status = Column(Text, nullable=False, default="candidate")
+    occurrence_count = Column(Integer, nullable=False, default=1)
+    success_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class Artifact(Base):
     __tablename__ = "artifacts"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -58,4 +89,15 @@ class Artifact(Base):
     type = Column(Text, nullable=False)
     file_path = Column(Text)
     metadata_ = Column("metadata", JSONB)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+
+class DocumentRevision(Base):
+    __tablename__ = "document_revisions"
+    __table_args__ = (UniqueConstraint("artifact_id", "version", name="uq_document_revision_version"),)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artifact_id = Column(UUID(as_uuid=True), ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    version = Column(Integer, nullable=False)
+    content = Column(JSONB, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

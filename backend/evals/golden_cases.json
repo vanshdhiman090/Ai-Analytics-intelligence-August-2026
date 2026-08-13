@@ -1,0 +1,168 @@
+{
+  "suite_version": "2.0",
+  "description": "Deterministic release gate for calculations, methodology, safety, uncertainty, data handling, and reproducibility.",
+  "cases": [
+    {
+      "id": "CALC-001", "name": "Regional sum ranking is exact", "category": "calculation", "severity": "critical",
+      "rows": [{"region":"North","revenue":100},{"region":"South","revenue":70},{"region":"North","revenue":40}],
+      "plan": {"objective":"Rank total revenue by region","question_coverage":["Regional ranking"],"operations":[{"operation_id":"OP1","kind":"grouped_aggregate","metric_column":"revenue","dimension_column":"region","aggregation":"sum","rationale":"Compare regions"}]},
+      "assertions": [{"type":"equals","path":"results.0.rows.0.region","expected":"North"},{"type":"equals","path":"results.0.rows.0.value","expected":140},{"type":"equals","path":"results.0.rows.0.rank","expected":1}]
+    },
+    {
+      "id": "CALC-002", "name": "Contribution shares reconcile to 100 percent", "category": "calculation", "severity": "critical",
+      "rows": [{"segment":"A","sales":80},{"segment":"B","sales":15},{"segment":"C","sales":5}],
+      "plan": {"objective":"Measure segment contribution","question_coverage":["Contribution"],"operations":[{"operation_id":"OP1","kind":"grouped_aggregate","metric_column":"sales","dimension_column":"segment","aggregation":"sum","rationale":"Calculate shares"}]},
+      "assertions": [{"type":"sum_approx","path":"results.0.rows.*.share_of_total_pct","expected":100,"tolerance":0.000001},{"type":"approx","path":"results.0.diagnostics.top_group_share_pct","expected":80,"tolerance":0.000001}]
+    },
+    {
+      "id": "CALC-003", "name": "Grouped means preserve group sample counts", "category": "calculation", "severity": "high",
+      "rows": [{"team":"A","score":10},{"team":"A","score":20},{"team":"B","score":100}],
+      "plan": {"objective":"Compare average score by team","question_coverage":["Team averages"],"operations":[{"operation_id":"OP1","kind":"grouped_aggregate","metric_column":"score","dimension_column":"team","aggregation":"mean","rationale":"Compare means"}]},
+      "assertions": [{"type":"equals","path":"results.0.rows.0.team","expected":"B"},{"type":"equals","path":"results.0.rows.1.observed_count","expected":2},{"type":"is_null","path":"results.0.diagnostics.top_group_share_pct"}]
+    },
+    {
+      "id": "CALC-004", "name": "Latest period change uses the immediately prior period", "category": "calculation", "severity": "critical",
+      "rows": [{"date":"2026-01-01","sales":100},{"date":"2026-02-01","sales":125},{"date":"2026-03-01","sales":150}],
+      "plan": {"objective":"Compare latest monthly sales with prior month","question_coverage":["Period change"],"operations":[{"operation_id":"OP1","kind":"period_comparison","metric_column":"sales","time_column":"date","aggregation":"sum","time_grain":"month","rationale":"Quantify latest change"}]},
+      "assertions": [{"type":"equals","path":"results.0.rows.1.period","expected":"2026-03"},{"type":"equals","path":"results.0.rows.1.absolute_change","expected":25},{"type":"approx","path":"results.0.rows.1.percent_change","expected":20,"tolerance":0.000001}]
+    },
+    {
+      "id": "CALC-005", "name": "Zero comparison baseline never produces infinite growth", "category": "calculation", "severity": "critical",
+      "rows": [{"date":"2026-01-01","sales":0},{"date":"2026-02-01","sales":10}],
+      "plan": {"objective":"Compare monthly sales safely","question_coverage":["Period change"],"operations":[{"operation_id":"OP1","kind":"period_comparison","metric_column":"sales","time_column":"date","aggregation":"sum","time_grain":"month","rationale":"Avoid invalid division"}]},
+      "assertions": [{"type":"is_null","path":"results.0.rows.1.percent_change"},{"type":"equals","path":"results.0.rows.1.absolute_change","expected":10}]
+    },
+    {
+      "id": "DATA-001", "name": "Invalid dates block time analysis rather than being silently excluded", "category": "data_quality", "severity": "critical",
+      "rows": [{"date":"2026-01-01","sales":10},{"date":"not-a-date","sales":20},{"date":"2026-02-01","sales":30}],
+      "plan": {"objective":"Measure monthly sales movement","question_coverage":["Monthly trend"],"operations":[{"operation_id":"OP1","kind":"trend","metric_column":"sales","time_column":"date","aggregation":"sum","rationale":"Inspect change"}]},
+      "expected_error": "INVALID_DATE_COLUMN", "assertions": []
+    },
+    {
+      "id": "DATA-002", "name": "Null numeric values do not enter distribution statistics", "category": "data_quality", "severity": "high",
+      "rows": [{"score":1},{"score":null},{"score":3},{"score":5}],
+      "plan": {"objective":"Describe valid scores","question_coverage":["Distribution"],"operations":[{"operation_id":"OP1","kind":"distribution","metric_column":"score","rationale":"Profile valid observations"}]},
+      "assertions": [{"type":"equals","path":"results.0.diagnostics.valid_count","expected":3},{"type":"equals","path":"results.0.diagnostics.missing_count","expected":1},{"type":"equals","path":"results.0.rows.3.value","expected":3}]
+    },
+    {
+      "id": "DATA-003", "name": "Limited rankings disclose omitted categories", "category": "data_quality", "severity": "medium",
+      "rows": [{"segment":"A","sales":40},{"segment":"B","sales":30},{"segment":"C","sales":20},{"segment":"D","sales":10}],
+      "plan": {"objective":"Show leading segments","question_coverage":["Ranking"],"operations":[{"operation_id":"OP1","kind":"grouped_aggregate","metric_column":"sales","dimension_column":"segment","aggregation":"sum","limit":2,"rationale":"Bound output"}]},
+      "assertions": [{"type":"length","path":"results.0.rows","expected":2},{"type":"equals","path":"results.0.diagnostics.group_count","expected":4},{"type":"contains","path":"results.0.caveats","expected":"Displayed 2 of 4 groups"}]
+    },
+    {
+      "id": "METHOD-001", "name": "Time questions require a time-based method", "category": "methodology", "severity": "critical",
+      "question": "How did revenue change over time?", "rows": [{"date":"2026-01-01","revenue":10},{"date":"2026-02-01","revenue":20}],
+      "plan": {"objective":"Describe revenue","question_coverage":["Revenue"],"operations":[{"operation_id":"OP1","kind":"distribution","metric_column":"revenue","rationale":"Describe values"}]},
+      "expected_error": "no time-based operation", "assertions": []
+    },
+    {
+      "id": "METHOD-002", "name": "Outlier questions require a distribution diagnostic", "category": "methodology", "severity": "critical",
+      "question": "Are there unusual outliers in revenue?", "rows": [{"revenue":10},{"revenue":11},{"revenue":100}],
+      "plan": {"objective":"Summarize revenue","question_coverage":["Revenue"],"operations":[{"operation_id":"OP1","kind":"grouped_aggregate","metric_column":"revenue","dimension_column":null,"aggregation":"sum","rationale":"Total revenue"}]},
+      "expected_error": "no distribution diagnostic", "assertions": []
+    },
+    {
+      "id": "METHOD-003", "name": "Auto time grain selects daily periods for short spans", "category": "methodology", "severity": "medium",
+      "rows": [{"date":"2026-01-01","sales":10},{"date":"2026-01-03","sales":20}],
+      "plan": {"objective":"Inspect short-term sales","question_coverage":["Daily movement"],"operations":[{"operation_id":"OP1","kind":"trend","metric_column":"sales","time_column":"date","aggregation":"sum","time_grain":"auto","rationale":"Choose suitable grain"}]},
+      "assertions": [{"type":"equals","path":"results.0.diagnostics.time_grain","expected":"day"},{"type":"equals","path":"results.0.rows.1.period","expected":"2026-01-03"}]
+    },
+    {
+      "id": "SAFE-001", "name": "Invented metric columns are rejected", "category": "safety", "severity": "critical",
+      "rows": [{"region":"North","revenue":100}],
+      "plan": {"objective":"Rank profit by region","question_coverage":["Profit"],"operations":[{"operation_id":"OP1","kind":"grouped_aggregate","metric_column":"profit","dimension_column":"region","aggregation":"sum","rationale":"Compare profit"}]},
+      "expected_error": "unknown or missing column", "assertions": []
+    },
+    {
+      "id": "SAFE-002", "name": "Text metrics cannot be silently aggregated as numeric", "category": "safety", "severity": "critical",
+      "rows": [{"region":"North","revenue":"high"},{"region":"South","revenue":"low"}],
+      "plan": {"objective":"Average revenue by region","question_coverage":["Revenue"],"operations":[{"operation_id":"OP1","kind":"grouped_aggregate","metric_column":"revenue","dimension_column":"region","aggregation":"mean","rationale":"Compare revenue"}]},
+      "expected_error": "requires numeric column", "assertions": []
+    },
+    {
+      "id": "SAFE-003", "name": "Duplicate operation IDs are rejected", "category": "safety", "severity": "high",
+      "rows": [{"sales":10},{"sales":20}],
+      "plan": {"objective":"Describe sales safely","question_coverage":["Summary and distribution"],"operations":[{"operation_id":"OP1","kind":"distribution","metric_column":"sales","rationale":"Spread"},{"operation_id":"OP1","kind":"summary","rationale":"Summary"}]},
+      "expected_error": "IDs must be unique", "assertions": []
+    },
+    {
+      "id": "UNCERT-001", "name": "Small correlation samples are explicitly exploratory", "category": "uncertainty", "severity": "critical",
+      "rows": [{"x":1,"y":2},{"x":2,"y":4},{"x":3,"y":5}],
+      "plan": {"objective":"Explore association","question_coverage":["Association"],"operations":[{"operation_id":"OP1","kind":"correlation","metric_column":"x","dimension_column":"y","rationale":"Measure association"}]},
+      "assertions": [{"type":"equals","path":"results.0.quality_status","expected":"caution"},{"type":"contains","path":"results.0.caveats","expected":"exploratory"},{"type":"equals","path":"results.0.rows.0.pair_count","expected":3}]
+    },
+    {
+      "id": "UNCERT-002", "name": "Constant columns cannot produce fake correlation", "category": "uncertainty", "severity": "critical",
+      "rows": [{"x":1,"y":1},{"x":1,"y":2},{"x":1,"y":3}],
+      "plan": {"objective":"Assess association","question_coverage":["Association"],"operations":[{"operation_id":"OP1","kind":"correlation","metric_column":"x","dimension_column":"y","rationale":"Measure association"}]},
+      "expected_error": "requires variation", "assertions": []
+    },
+    {
+      "id": "UNCERT-003", "name": "Correlation language preserves non-causal boundary", "category": "uncertainty", "severity": "critical",
+      "rows": [{"x":1,"y":2},{"x":2,"y":4},{"x":3,"y":6},{"x":4,"y":8}],
+      "plan": {"objective":"Measure association","question_coverage":["Association"],"operations":[{"operation_id":"OP1","kind":"correlation","metric_column":"x","dimension_column":"y","rationale":"Quantify association"}]},
+      "assertions": [{"type":"approx","path":"results.0.rows.0.correlation","expected":1,"tolerance":0.000001},{"type":"contains","path":"results.0.caveats","expected":"does not establish causation"}]
+    },
+    {
+      "id": "UNCERT-004", "name": "Distribution reports a reproducible confidence interval", "category": "uncertainty", "severity": "high",
+      "rows": [{"value":10},{"value":12},{"value":14},{"value":16},{"value":18},{"value":20},{"value":22},{"value":24},{"value":26},{"value":28},{"value":30},{"value":32},{"value":34},{"value":36},{"value":38},{"value":40},{"value":42},{"value":44},{"value":46},{"value":48},{"value":50},{"value":52},{"value":54},{"value":56},{"value":58},{"value":60},{"value":62},{"value":64},{"value":66},{"value":68}],
+      "plan": {"objective":"Estimate the value distribution","question_coverage":["Uncertainty"],"operations":[{"operation_id":"OP1","kind":"distribution","metric_column":"value","rationale":"Quantify spread and uncertainty"}]},
+      "assertions": [{"type":"equals","path":"results.0.quality_status","expected":"ready"},{"type":"not_null","path":"results.0.diagnostics.mean_ci_95_low"},{"type":"not_null","path":"results.0.diagnostics.mean_ci_95_high"}]
+    },
+    {
+      "id": "OUTLIER-001", "name": "IQR outlier detection identifies the correct observation", "category": "calculation", "severity": "high",
+      "rows": [{"value":10},{"value":11},{"value":12},{"value":12},{"value":13},{"value":14},{"value":100}],
+      "plan": {"objective":"Identify unusual values","question_coverage":["Outliers"],"operations":[{"operation_id":"OP1","kind":"outlier_analysis","metric_column":"value","rationale":"Flag unusual observations"}]},
+      "assertions": [{"type":"equals","path":"results.0.diagnostics.outlier_count","expected":1},{"type":"equals","path":"results.0.rows.1.outlier_value","expected":100},{"type":"contains","path":"results.0.caveats","expected":"must not be removed automatically"}]
+    },
+    {
+      "id": "OUTLIER-002", "name": "Too-small samples cannot claim IQR outliers", "category": "methodology", "severity": "high",
+      "rows": [{"value":1},{"value":2},{"value":100}],
+      "plan": {"objective":"Identify unusual values","question_coverage":["Outliers"],"operations":[{"operation_id":"OP1","kind":"outlier_analysis","metric_column":"value","rationale":"Flag unusual observations"}]},
+      "expected_error": "at least 4 valid values", "assertions": []
+    },
+    {
+      "id": "EDGE-001", "name": "Numeric summary refuses datasets with no numeric evidence", "category": "safety", "severity": "high",
+      "rows": [{"segment":"A"},{"segment":"B"}],
+      "plan": {"objective":"Summarize the dataset","question_coverage":["Summary"],"operations":[{"operation_id":"OP1","kind":"summary","rationale":"Describe numeric fields"}]},
+      "expected_error": "no numeric columns", "assertions": []
+    },
+    {
+      "id": "EDGE-002", "name": "Trend refuses invalid date semantics before calculating", "category": "methodology", "severity": "high",
+      "rows": [{"date":"invalid","sales":10},{"date":"2026-01-01","sales":20}],
+      "plan": {"objective":"Inspect sales trend","question_coverage":["Trend"],"operations":[{"operation_id":"OP1","kind":"trend","metric_column":"sales","time_column":"date","aggregation":"sum","rationale":"Measure movement"}]},
+      "expected_error": "INVALID_DATE_COLUMN", "assertions": []
+    },
+    {
+      "id":"ADV-001","name":"KPI rates use ratio of sums rather than average of row rates","category":"calculation","severity":"critical",
+      "rows":[{"channel":"A","conversions":10,"visits":100},{"channel":"A","conversions":20,"visits":50}],
+      "plan":{"objective":"Calculate conversion rate correctly","question_coverage":["Conversion rate"],"operations":[{"operation_id":"OP1","kind":"kpi_ratio","metric_column":"conversions","denominator_column":"visits","dimension_column":"channel","ratio_scale":100,"rationale":"Use auditable numerator and denominator"}]},
+      "assertions":[{"type":"approx","path":"results.0.rows.0.ratio","expected":20,"tolerance":0.000001},{"type":"equals","path":"results.0.rows.0.denominator","expected":150.0}]
+    },
+    {
+      "id":"ADV-002","name":"KPI ratios fail closed on universal zero denominators","category":"safety","severity":"critical",
+      "rows":[{"wins":1,"opportunities":0},{"wins":2,"opportunities":0}],
+      "plan":{"objective":"Calculate win rate safely","question_coverage":["Win rate"],"operations":[{"operation_id":"OP1","kind":"kpi_ratio","metric_column":"wins","denominator_column":"opportunities","rationale":"Protect denominator"}]},
+      "expected_error":"zero denominator","assertions":[]
+    },
+    {
+      "id":"ADV-003","name":"Statistical comparison requires explicit groups","category":"methodology","severity":"critical",
+      "rows":[{"group":"A","score":1},{"group":"A","score":2},{"group":"A","score":3},{"group":"B","score":4},{"group":"B","score":5},{"group":"B","score":6}],
+      "plan":{"objective":"Compare groups","question_coverage":["Difference"],"operations":[{"operation_id":"OP1","kind":"statistical_comparison","metric_column":"score","dimension_column":"group","rationale":"Avoid arbitrary comparison"}]},
+      "expected_error":"explicit baseline_value and comparison_value","assertions":[]
+    },
+    {
+      "id":"ADV-004","name":"Statistical comparison quantifies magnitude and uncertainty","category":"uncertainty","severity":"critical",
+      "rows":[{"group":"A","score":9},{"group":"A","score":10},{"group":"A","score":11},{"group":"B","score":19},{"group":"B","score":20},{"group":"B","score":21}],
+      "plan":{"objective":"Compare group B with group A","question_coverage":["Difference"],"operations":[{"operation_id":"OP1","kind":"statistical_comparison","metric_column":"score","dimension_column":"group","baseline_value":"A","comparison_value":"B","rationale":"Measure effect"}]},
+      "assertions":[{"type":"equals","path":"results.0.rows.0.mean_difference","expected":10.0},{"type":"between","path":"results.0.rows.0.permutation_p_value","minimum":0,"maximum":0.1},{"type":"contains","path":"results.0.caveats","expected":"does not establish causal"}]
+    },
+    {
+      "id":"ADV-005","name":"Segment driver contributions reconcile to total movement","category":"calculation","severity":"critical",
+      "rows":[{"date":"2026-01-01","segment":"A","sales":100},{"date":"2026-01-01","segment":"B","sales":100},{"date":"2026-02-01","segment":"A","sales":150},{"date":"2026-02-01","segment":"B","sales":80}],
+      "plan":{"objective":"Explain sales movement by segment","question_coverage":["Drivers"],"operations":[{"operation_id":"OP1","kind":"segment_change","metric_column":"sales","dimension_column":"segment","time_column":"date","aggregation":"sum","time_grain":"month","rationale":"Reconcile drivers"}]},
+      "assertions":[{"type":"equals","path":"results.0.diagnostics.total_change","expected":30.0},{"type":"equals","path":"results.0.diagnostics.reconciliation_residual","expected":0.0},{"type":"equals","path":"results.0.rows.0.segment","expected":"A"}]
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "AI Analytics Workspace",
-  description: "Upload data. Get a decision-ready report.",
+  title: "AI Root Cause Investigation Agent",
+  description: "Investigate KPI movements through tested contributions, evidence, and explicit uncertainty.",
 };
 
 export default function RootLayout({ children }) {

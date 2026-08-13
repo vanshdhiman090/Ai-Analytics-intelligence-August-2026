@@ -1,0 +1,9 @@
+date,revenue,country,device,customer_type,order_id,constant_field
+2026-01-01,30000,Germany,Mobile,Returning,O-001,production
+2026-01-01,30000,Germany,Desktop,New,O-002,production
+2026-01-01,20000,France,Mobile,Returning,O-003,production
+2026-01-01,20000,United Kingdom,Desktop,New,O-004,production
+2026-02-01,20500,Germany,Mobile,Returning,O-005,production
+2026-02-01,29000,Germany,Desktop,New,O-006,production
+2026-02-01,20500,France,Mobile,Returning,O-007,production
+2026-02-01,15000,United Kingdom,Desktop,New,O-008,production

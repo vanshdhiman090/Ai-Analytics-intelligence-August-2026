@@ -14,6 +14,7 @@ from app.services.tabular import DateSemanticError, parse_date_series
 from app.services.comparison_context import extract_explicit_comparison_context
 from app.services.hypothesis_planner import plan_hypotheses, update_hypothesis_statuses
 from app.services.investigation_controller import choose_next_action
+from app.services.investigation_verifier import verify_investigation
 
 from app.domain.root_cause_contracts import (
     AdditiveKPISemanticDefinition,
@@ -640,6 +641,12 @@ def run_single_level_investigation(
 ) -> InvestigationState:
     """Run the smallest real deterministic KPI investigation loop."""
     request = SingleLevelInvestigationRequest.model_validate(request)
+    if request.self_falsification_enabled:
+        provisional = run_single_level_investigation(
+            frame,
+            request.model_copy(update={"self_falsification_enabled": False}),
+        )
+        return verify_investigation(provisional, request)
     if request.evidence_driven_control_enabled:
         return run_evidence_driven_investigation(frame, request)
     if request.hypothesis_planning_enabled:

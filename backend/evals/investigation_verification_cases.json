@@ -1,0 +1,77 @@
+[
+  {
+    "id": "leader_survives",
+    "dataset": "robust",
+    "paired_group": "verification-reactivity",
+    "provider_mode": "valid",
+    "expected": {
+      "leading_dimension": "country",
+      "leading_segment": "Germany",
+      "verification_status": "robust_no_material_challenge"
+    }
+  },
+  {
+    "id": "near_equal_competing_decomposition",
+    "dataset": "competing",
+    "paired_group": "verification-reactivity",
+    "provider_mode": "valid",
+    "expected": {
+      "leading_dimension": "country",
+      "leading_segment": "Germany",
+      "verification_status": "competing_explanations"
+    }
+  },
+  {
+    "id": "large_leading_segment_remainder",
+    "dataset": "remainder",
+    "provider_mode": "valid",
+    "expected": {
+      "leading_dimension": "country",
+      "leading_segment": "Germany",
+      "verification_status": "weakened"
+    }
+  },
+  {
+    "id": "material_offset_cancellation",
+    "dataset": "offset",
+    "provider_mode": "valid",
+    "expected": {
+      "leading_dimension": "country",
+      "leading_segment": "Germany",
+      "verification_status": "robust_with_caveats",
+      "required_result_code": "offsets_material"
+    }
+  },
+  {
+    "id": "challenge_provider_failure",
+    "dataset": "robust",
+    "provider_mode": "failure",
+    "expected": {
+      "leading_dimension": "country",
+      "leading_segment": "Germany",
+      "verification_status": "robust_no_material_challenge",
+      "fallback_reason": "provider_failure"
+    }
+  },
+  {
+    "id": "downstream_scope_quality_is_local",
+    "dataset": "scope_quality",
+    "provider_mode": "valid",
+    "maximum_depth": 2,
+    "expected": {
+      "leading_dimension": "country",
+      "leading_segment": "Germany",
+      "verification_status": "robust_no_material_challenge",
+      "downstream_stopping_reason": "scoped_data_quality_failure"
+    }
+  },
+  {
+    "id": "unsafe_global_data_stops_before_verification",
+    "dataset": "unsafe_global",
+    "provider_mode": "valid",
+    "expected": {
+      "outcome": "data_quality_incident",
+      "verification_status": "not_run"
+    }
+  }
+]

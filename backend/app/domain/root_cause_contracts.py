@@ -71,6 +71,57 @@ ControllerRejectionReason = Literal[
     "premature_stop",
     "data_health_blocked",
 ]
+ChallengeType = Literal[
+    "competing_driver",
+    "leading_segment_remainder",
+    "offset_cancellation",
+    "data_quality",
+]
+ChallengeReasonCode = Literal[
+    "compare_tested_decompositions",
+    "assess_leading_segment_coverage",
+    "assess_opposing_offsets",
+    "assess_target_scope_health",
+]
+ChallengeProposalSource = Literal["llm", "deterministic_fallback"]
+ChallengeProposalRejectionReason = Literal[
+    "provider_failure",
+    "malformed_output",
+    "challenge_not_applicable",
+    "duplicate_challenge",
+    "reason_code_mismatch",
+    "unsupported_numeric_claim",
+    "causal_or_certainty_claim",
+    "unsafe_brief_reason",
+]
+VerificationResult = Literal[
+    "supports_leading",
+    "contradicts_leading",
+    "inconclusive",
+]
+VerificationMateriality = Literal["none", "caution", "material", "blocking"]
+VerificationResultCode = Literal[
+    "no_material_competitor_detected",
+    "competing_driver_caution",
+    "material_competing_driver",
+    "leading_segment_remainder_low",
+    "leading_segment_remainder_caution",
+    "leading_segment_remainder_material",
+    "offsets_low",
+    "offsets_caution",
+    "offsets_material",
+    "target_scope_quality_safe",
+    "target_scope_quality_caution",
+    "target_scope_quality_blocking",
+]
+VerificationRobustnessStatus = Literal[
+    "not_run",
+    "robust_no_material_challenge",
+    "robust_with_caveats",
+    "weakened",
+    "competing_explanations",
+    "abstain",
+]
 
 
 class RCAContract(BaseModel):
@@ -337,6 +388,7 @@ class SingleLevelInvestigationRequest(RCAContract):
     negligible_parent_movement_tolerance: float = Field(default=1e-9, ge=0.0)
     hypothesis_planning_enabled: bool = False
     evidence_driven_control_enabled: bool = False
+    self_falsification_enabled: bool = False
 
     @model_validator(mode="after")
     def periods_and_dimensions_must_be_distinct(self) -> "SingleLevelInvestigationRequest":
@@ -344,6 +396,10 @@ class SingleLevelInvestigationRequest(RCAContract):
             raise ValueError("Baseline and comparison periods must differ")
         if len(self.candidate_dimensions) != len(set(self.candidate_dimensions)):
             raise ValueError("Candidate dimensions must be unique")
+        if self.self_falsification_enabled and not self.evidence_driven_control_enabled:
+            raise ValueError(
+                "Self-falsification requires the evidence-driven controller"
+            )
         return self
 
 
@@ -486,6 +542,106 @@ class InvestigationIteration(RCAContract):
     terminal_reason: str | None = None
 
 
+class VerificationPolicyV1(RCAContract):
+    """Versioned engineering heuristics, not calibrated probabilities."""
+
+    verification_policy_version: Literal["verification-policy-v1"] = (
+        "verification-policy-v1"
+    )
+    competing_driver_caution_ratio: float = Field(default=0.60, ge=0.0)
+    competing_driver_material_ratio: float = Field(default=0.80, ge=0.0)
+    leading_segment_remainder_caution_ratio: float = Field(default=0.20, ge=0.0)
+    leading_segment_remainder_material_ratio: float = Field(default=0.50, ge=0.0)
+    offset_caution_ratio: float = Field(default=0.10, ge=0.0)
+    offset_material_ratio: float = Field(default=0.20, ge=0.0)
+
+    @model_validator(mode="after")
+    def caution_thresholds_precede_material_thresholds(self) -> "VerificationPolicyV1":
+        if self.competing_driver_caution_ratio >= self.competing_driver_material_ratio:
+            raise ValueError("Competing-driver caution must be below material")
+        if (
+            self.leading_segment_remainder_caution_ratio
+            >= self.leading_segment_remainder_material_ratio
+        ):
+            raise ValueError("Remainder caution must be below material")
+        if self.offset_caution_ratio >= self.offset_material_ratio:
+            raise ValueError("Offset caution must be below material")
+        return self
+
+
+class VerificationTarget(RCAContract):
+    scope_node_id: str = Field(pattern=r"^IN\d+$")
+    filter_path: tuple[InvestigationFilter, ...] = Field(default_factory=tuple)
+    target_dimension: str = Field(min_length=1)
+    target_segment: str = Field(min_length=1)
+    source_test_ids: tuple[str, ...] = Field(min_length=1)
+    source_evidence_ids: tuple[str, ...] = Field(min_length=1)
+
+
+class ChallengeProposal(RCAContract):
+    challenge_type: ChallengeType
+    reason_code: ChallengeReasonCode
+    brief_reason: str | None = Field(default=None, max_length=180)
+
+
+class ChallengeProposalSet(RCAContract):
+    proposals: tuple[ChallengeProposal, ...] = Field(min_length=1, max_length=4)
+
+
+class RejectedChallengeProposal(RCAContract):
+    challenge_type: str = Field(min_length=1, max_length=64)
+    rejection_reason: ChallengeProposalRejectionReason
+
+
+class PlannedChallenge(RCAContract):
+    challenge_id: str = Field(pattern=r"^VC\d+$")
+    challenge_type: ChallengeType
+    reason_code: ChallengeReasonCode
+    brief_reason: str | None = None
+    source: ChallengeProposalSource
+
+
+class ChallengePlanningRecord(RCAContract):
+    planning_id: str = Field(pattern=r"^VP\d+$")
+    planner_version: Literal["challenge-planner-v1"] = "challenge-planner-v1"
+    verification_policy_version: Literal["verification-policy-v1"] = (
+        "verification-policy-v1"
+    )
+    target: VerificationTarget
+    applicable_challenges: tuple[ChallengeType, ...]
+    validated_challenges: tuple[PlannedChallenge, ...]
+    rejected_proposals: tuple[RejectedChallengeProposal, ...] = Field(
+        default_factory=tuple
+    )
+    fallback_reason: Literal[
+        "provider_failure",
+        "malformed_output",
+        "no_valid_proposals",
+        "omitted_required_challenges",
+    ] | None = None
+    planner_mode: Literal[
+        "llm",
+        "deterministic_fallback",
+        "llm_with_fallback",
+    ]
+
+
+class VerificationRecord(RCAContract):
+    verification_id: str = Field(pattern=r"^IV\d+$")
+    verification_policy_version: Literal["verification-policy-v1"] = (
+        "verification-policy-v1"
+    )
+    challenge_type: ChallengeType
+    target: VerificationTarget
+    source_test_ids: tuple[str, ...] = Field(default_factory=tuple)
+    source_evidence_ids: tuple[str, ...] = Field(min_length=1)
+    result: VerificationResult
+    materiality: VerificationMateriality
+    result_code: VerificationResultCode
+    metrics: dict[str, float | int | str | None] = Field(default_factory=dict)
+    rationale: str = Field(min_length=1)
+
+
 class InvestigationPathNode(RCAContract):
     """One selected scope in the greedy recursive investigation path."""
 
@@ -538,3 +694,12 @@ class InvestigationState(RCAContract):
     investigation_path: tuple[InvestigationPathNode, ...] = Field(default_factory=tuple)
     hypothesis_planning_records: tuple[HypothesisPlanningRecord, ...] = Field(default_factory=tuple)
     investigation_iterations: tuple[InvestigationIteration, ...] = Field(default_factory=tuple)
+    verification_policy_version: Literal["verification-policy-v1"] | None = None
+    challenge_planning_record: ChallengePlanningRecord | None = None
+    verification_records: tuple[VerificationRecord, ...] = Field(default_factory=tuple)
+    supporting_verification_ids: tuple[str, ...] = Field(default_factory=tuple)
+    contradicting_verification_ids: tuple[str, ...] = Field(default_factory=tuple)
+    unresolved_verification_ids: tuple[str, ...] = Field(default_factory=tuple)
+    verification_status: VerificationRobustnessStatus = "not_run"
+    verification_evidence_strength: InvestigationEvidenceStrength = "insufficient"
+    verification_rationale: str | None = None

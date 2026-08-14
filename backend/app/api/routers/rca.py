@@ -29,6 +29,7 @@ from app.services.rca_api import (
     execute_rca_request,
     load_governed_dataset,
 )
+from app.services.dataset_lifecycle import dataset_in_use
 
 
 logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ def create_rca_investigation(
     request: Request,
     resolve_dataset: DatasetRecordResolver = Depends(get_rca_dataset_resolver),
 ) -> RCAInvestigationResponseV1:
-    dataset = resolve_dataset(body.dataset_id)
-    frame = load_governed_dataset(dataset, settings.DATA_DIR)
-    return execute_rca_request(frame, body)
-
+    with dataset_in_use(body.dataset_id):
+        dataset = resolve_dataset(body.dataset_id)
+        frame = load_governed_dataset(dataset, settings.DATA_DIR)
+        return execute_rca_request(frame, body)

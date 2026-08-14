@@ -45,7 +45,7 @@ export default class ReleaseReporter {
       failures,
       source_fingerprint: sourceFingerprint(),
     };
-    const output = path.resolve("e2e", "reports", "latest.json");
+    const output = path.resolve(process.env.PLAYWRIGHT_RELEASE_REPORT || path.join("e2e", "reports", "latest.json"));
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, JSON.stringify(payload, null, 2));
   }

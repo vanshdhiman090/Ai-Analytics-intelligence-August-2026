@@ -116,6 +116,13 @@ cd frontend
 npm run build
 ```
 
+Frontend semantic browser gate:
+
+```powershell
+cd frontend
+npm run test:e2e
+```
+
 ## API lifecycle
 
 - `POST /datasets` validates and uploads a dataset.
@@ -140,4 +147,4 @@ npm run build
 
 ## Current readiness
 
-This is strong for local portfolio work and controlled pilots. Public multi-user deployment still requires authentication/authorization, encrypted object storage, a distributed job queue, monitoring, rate limits, backups, and formal privacy controls. See [Production readiness](docs/PRODUCTION_READINESS.md).
+This is strong for local portfolio work and controlled pilots. Public multi-user deployment still requires authentication/authorization, tenant isolation, encrypted object storage, a distributed job queue, monitoring, rate limits, backups, and formal privacy controls. See the [operational guide](docs/OPERATIONS.md) and [production readiness](docs/PRODUCTION_READINESS.md).

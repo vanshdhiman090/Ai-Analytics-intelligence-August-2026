@@ -10,5 +10,5 @@ $venvPython = Join-Path $backend ".venv\Scripts\python.exe"
 & $venvPython -m pip install -r (Join-Path $backend "requirements.txt")
 Push-Location $frontend
 try { & npm.cmd install } finally { Pop-Location }
-Write-Host "Setup complete. Copy backend\.env.example to backend\.env and add your Neon and Gemini values." -ForegroundColor Green
+Write-Host "Setup complete. Copy backend\.env.example to backend\.env and add your database URL. Gemini is optional for deterministic RCA fallback." -ForegroundColor Green
 Write-Host "Then run .\Start-Agent.ps1"

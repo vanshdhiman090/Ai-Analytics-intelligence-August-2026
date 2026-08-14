@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+
+from fastapi import APIRouter, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.core.config import settings
@@ -18,15 +22,42 @@ def health_live():
 
 @router.get("/health/ready")
 def health_ready():
-    db = SessionLocal()
+    database_status = "ok"
+    data_directory_status = "ok"
+    db = None
     try:
+        db = SessionLocal()
         db.execute(text("SELECT 1"))
-        return {
-            "status": "ready",
-            "database": "ok",
-            "checkpointer": settings.CHECKPOINT_BACKEND,
-        }
-    except Exception as exc:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Database is not ready") from exc
+    except Exception:
+        database_status = "unavailable"
     finally:
-        db.close()
+        if db is not None:
+            db.close()
+
+    probe_path: Path | None = None
+    try:
+        data_dir = Path(settings.DATA_DIR)
+        data_dir.mkdir(parents=True, exist_ok=True)
+        if not data_dir.is_dir():
+            raise OSError("configured data directory is not a directory")
+        with NamedTemporaryFile(prefix=".readiness-", dir=data_dir, delete=False) as probe:
+            probe.write(b"ready")
+            probe_path = Path(probe.name)
+    except Exception:
+        data_directory_status = "unavailable"
+    finally:
+        if probe_path is not None:
+            try:
+                probe_path.unlink(missing_ok=True)
+            except OSError:
+                data_directory_status = "unavailable"
+
+    payload = {
+        "status": "ready" if database_status == data_directory_status == "ok" else "not_ready",
+        "database": database_status,
+        "data_directory": data_directory_status,
+        "checkpointer": settings.CHECKPOINT_BACKEND,
+    }
+    if payload["status"] != "ready":
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=payload)
+    return payload

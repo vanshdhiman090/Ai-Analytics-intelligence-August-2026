@@ -10,17 +10,16 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, text
+from sqlalchemy import func
 
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models.schema import Dataset
 from app.models.schema import Session as SessionModel
 from app.services import progress as progress_bus
+from app.services.dataset_lifecycle import cleanup_dataset_records, expired_dataset_records
 from app.services.run_manager import run_manager
 
 from app.api.routers import agents, health, evaluations, datasets, sessions, artifacts, connectors, rca
@@ -30,36 +29,35 @@ logger = logging.getLogger(__name__)
 
 # ── Background tasks ────────────────────────────────────────────────────────
 
-async def _cleanup_old_files() -> None:
-    """Delete uploaded/cleaned files for finished sessions older than FILE_TTL_DAYS.
+async def _cleanup_old_files(*, now: datetime | None = None) -> None:
+    """Remove expired standalone and finished-session dataset files and rows.
 
-    Runs once per hour. Only removes files for sessions in 'complete' or 'error'
-    status — never touches files belonging to active or paused sessions.
+    Runs once per hour. Recent standalone uploads and active-session datasets are preserved;
+    active in-process RCA requests are skipped.
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.FILE_TTL_DAYS)
-    db = SessionLocal()
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=settings.FILE_TTL_DAYS)
+    db = None
     try:
-        old_datasets = (
-            db.query(Dataset)
-            .join(SessionModel, Dataset.session_id == SessionModel.id)
-            .filter(
-                SessionModel.status.in_(["complete", "error"]),
-                SessionModel.updated_at < cutoff,
-            )
-            .all()
+        db = SessionLocal()
+        result = cleanup_dataset_records(
+            db,
+            expired_dataset_records(db, cutoff),
+            data_root=settings.DATA_DIR,
         )
-        removed = 0
-        for dataset in old_datasets:
-            path = Path(dataset.file_path)
-            if path.exists():
-                path.unlink(missing_ok=True)
-                removed += 1
-        if removed:
-            logger.info("File cleanup: removed %d file(s) older than %d days", removed, settings.FILE_TTL_DAYS)
+        if result.removed or result.skipped_active or result.failures:
+            logger.info(
+                "Dataset cleanup: removed=%d missing_files=%d skipped_active=%d failures=%d ttl_days=%d",
+                result.removed,
+                result.missing_files,
+                result.skipped_active,
+                result.failures,
+                settings.FILE_TTL_DAYS,
+            )
     except Exception:
         logger.exception("File cleanup task failed")
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
 
 async def _cleanup_loop() -> None:
@@ -77,7 +75,7 @@ async def lifespan(_: FastAPI):
 
     # Register the running event loop with the SSE progress bus so worker
     # threads can schedule events onto it.
-    progress_bus.set_event_loop(asyncio.get_event_loop())
+    progress_bus.set_event_loop(asyncio.get_running_loop())
 
     # Mark any sessions that were interrupted by a previous crash as failed.
     db = SessionLocal()
@@ -98,12 +96,17 @@ async def lifespan(_: FastAPI):
         db.close()
 
     # Start the hourly file cleanup background task.
-    cleanup_task = asyncio.create_task(_cleanup_loop())
+    cleanup_task = asyncio.create_task(_cleanup_loop(), name="dataset-cleanup")
 
-    yield
-
-    cleanup_task.cancel()
-    run_manager.shutdown()
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
+        run_manager.shutdown()
 
 
 # ── App factory ─────────────────────────────────────────────────────────────

@@ -163,6 +163,7 @@ export default function RcaWorkspace() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const resultRef = useRef(null);
   const errorRef = useRef(null);
+  const investigationInFlightRef = useRef(false);
 
   useEffect(() => {
     if (state.phase === "result") resultRef.current?.focus();
@@ -208,6 +209,7 @@ export default function RcaWorkspace() {
   }
 
   async function handleRun() {
+    if (investigationInFlightRef.current) return;
     const errors = validate(state.dataset, state.form);
     if (Object.keys(errors).length) {
       dispatch({ type: "VALIDATION_ERROR", errors });
@@ -228,12 +230,15 @@ export default function RcaWorkspace() {
       comparison_period: state.form.comparisonPeriod,
       candidate_dimensions: state.form.dimensions,
     };
+    investigationInFlightRef.current = true;
     dispatch({ type: "INVESTIGATE_START", payload });
     try {
       const result = await runRcaInvestigation(payload);
       dispatch({ type: "INVESTIGATE_SUCCESS", result });
     } catch (error) {
       dispatch({ type: "INVESTIGATE_ERROR", error, fieldErrors: mapApiFields(error, state.form) });
+    } finally {
+      investigationInFlightRef.current = false;
     }
   }
 

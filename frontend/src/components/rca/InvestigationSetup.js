@@ -69,7 +69,11 @@ function DatasetSummary({ dataset, onReplace, onRemove, disabled }) {
             type="file"
             accept=".csv,.xlsx"
             disabled={disabled}
-            onChange={(event) => event.target.files?.[0] && onReplace(event.target.files[0])}
+            onChange={(event) => {
+              const selected = event.target.files?.[0];
+              event.target.value = "";
+              if (selected) onReplace(selected);
+            }}
           />
           <button className="button ghost compact" type="button" disabled={disabled} onClick={onRemove}>Remove</button>
         </div>
@@ -130,7 +134,11 @@ function UploadPanel({ onUpload, uploading, errors }) {
         accept=".csv,.xlsx"
         disabled={uploading}
         aria-describedby={errors?.dataset ? "dataset-error" : undefined}
-        onChange={(event) => event.target.files?.[0] && onUpload(event.target.files[0])}
+        onChange={(event) => {
+          const selected = event.target.files?.[0];
+          event.target.value = "";
+          if (selected) onUpload(selected);
+        }}
       />
       <FieldError id="dataset" errors={errors} />
     </section>

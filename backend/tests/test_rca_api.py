@@ -240,6 +240,45 @@ def test_unknown_column_returns_sanitized_analysis_definition_error(tmp_path, mo
     assert "Traceback" not in response.text
 
 
+def test_missing_metric_time_and_dimension_columns_are_field_scoped_422_errors(tmp_path, monkeypatch):
+    client, dataset_id, original_lifespan = _client(tmp_path, monkeypatch)
+    cases = (
+        ("kpi", "metric_column", "missing_metric", "column:missing_metric"),
+        ("kpi", "time_column", "missing_time", "column:missing_time"),
+        ("candidate_dimensions", None, ["missing_dimension"], "column:missing_dimension"),
+    )
+    try:
+        for top_level, nested, value, expected_field in cases:
+            payload = _payload(dataset_id)
+            if nested:
+                payload[top_level][nested] = value
+            else:
+                payload[top_level] = value
+            response = client.post("/v1/rca/investigations", json=payload)
+            assert response.status_code == 422
+            assert response.json()["error"]["code"] == "invalid_analysis_definition"
+            assert response.json()["error"]["fields"] == [
+                {"field": expected_field, "code": "column_not_found"}
+            ]
+    finally:
+        _close(client, original_lifespan)
+
+
+def test_all_null_required_metric_is_an_analytical_abstention_not_http_failure(tmp_path, monkeypatch):
+    rows = _recursive_rows()
+    for row in rows:
+        row["revenue"] = None
+    client, dataset_id, original_lifespan = _client(tmp_path, monkeypatch, rows=rows)
+    try:
+        response = client.post("/v1/rca/investigations", json=_payload(dataset_id))
+    finally:
+        _close(client, original_lifespan)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["conclusion"]["claim"] == "data_quality_abstention"
+    assert response.json()["data_quality"]["status"] == "blocked"
+
+
 def test_adversarial_goal_cannot_expand_governed_analysis_surface(tmp_path, monkeypatch):
     client, dataset_id, original_lifespan = _client(tmp_path, monkeypatch)
     payload = _payload(
@@ -289,6 +328,47 @@ def test_provider_failure_uses_private_deterministic_fallback(tmp_path, monkeypa
     assert response.status_code == 200
     assert "provider" not in response.text.lower()
     assert "private" not in response.text.lower()
+
+
+def test_all_provider_decisions_can_fail_without_changing_mathematical_result(tmp_path, monkeypatch):
+    client, dataset_id, original_lifespan = _client(tmp_path, monkeypatch)
+    provider_failure = lambda *_: (_ for _ in ()).throw(TimeoutError("private provider timeout"))
+    monkeypatch.setattr("app.services.hypothesis_planner.generate_structured", provider_failure)
+    monkeypatch.setattr("app.services.investigation_controller.generate_structured", provider_failure)
+    monkeypatch.setattr("app.services.investigation_verifier.generate_structured", provider_failure)
+    try:
+        response = client.post("/v1/rca/investigations", json=_payload(dataset_id))
+    finally:
+        _close(client, original_lifespan)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["investigation_path"][0]["segment"] == "Germany"
+    assert response.json()["investigation_path"][0]["segment_movement"] == -80.0
+    assert response.json()["conclusion"]["claim"] != "confirmed_root_cause"
+    assert "provider" not in response.text.lower()
+    assert "timeout" not in response.text.lower()
+
+
+def test_missing_dataset_file_returns_sanitized_409_with_request_id(tmp_path, monkeypatch):
+    client, dataset_id, original_lifespan = _client(tmp_path, monkeypatch)
+    (tmp_path / "governed.csv").unlink()
+    try:
+        response = client.post(
+            "/v1/rca/investigations",
+            json=_payload(dataset_id),
+            headers={"X-Request-ID": "missing-dataset-4"},
+        )
+    finally:
+        _close(client, original_lifespan)
+
+    assert response.status_code == 409
+    assert response.json()["error"] == {
+        "code": "dataset_unavailable",
+        "message": "The requested dataset is unavailable.",
+        "request_id": "missing-dataset-4",
+        "fields": [],
+    }
+    assert str(tmp_path) not in response.text
 
 
 def test_exact_root_target_can_expose_target_applicable_robustness(tmp_path, monkeypatch):

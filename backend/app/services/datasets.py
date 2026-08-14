@@ -8,10 +8,9 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
 from fastapi import UploadFile
 
-from app.services.tabular import read_csv_robust
+from app.services.tabular import load_dataframe
 
 
 ALLOWED_EXTENSIONS = {".csv", ".xlsx"}
@@ -20,6 +19,18 @@ CHUNK_SIZE = 1024 * 1024
 
 class DatasetUploadError(ValueError):
     """Raised when an uploaded dataset is unsafe or unreadable."""
+
+
+class DatasetTooLargeError(DatasetUploadError):
+    """Raised when an upload crosses the server-owned resource boundary."""
+
+
+def _display_size_limit(max_bytes: int) -> str:
+    if max_bytes >= 1024 * 1024:
+        return f"{max_bytes / (1024 * 1024):g} MB"
+    if max_bytes >= 1024:
+        return f"{max_bytes / 1024:g} KB"
+    return f"{max_bytes} bytes"
 
 
 @dataclass(frozen=True)
@@ -39,12 +50,9 @@ def safe_filename(filename: str) -> str:
 
 
 def validate_tabular_file(path: Path) -> None:
-    """Parse a small sample so renamed binaries and malformed files are rejected."""
+    """Parse the complete file so ordinary malformed input is rejected at upload."""
     try:
-        if path.suffix == ".csv":
-            sample = read_csv_robust(path, nrows=25)
-        else:
-            sample = pd.read_excel(path, nrows=25)
+        frame = load_dataframe(path)
     except Exception as exc:
         if path.suffix == ".csv":
             message = "The CSV is damaged or uses an unsupported structure. Re-export it as CSV UTF-8 and try again."
@@ -52,10 +60,12 @@ def validate_tabular_file(path: Path) -> None:
             message = "The Excel file is damaged, password-protected, or not a true .xlsx workbook. Open it in Excel and use Save As → Excel Workbook (.xlsx)."
         raise DatasetUploadError(message) from exc
 
-    if not len(sample.columns):
+    if not len(frame.columns):
         raise DatasetUploadError("The dataset must contain at least one column.")
-    if any(not str(column).strip() for column in sample.columns):
+    if any(not str(column).strip() for column in frame.columns):
         raise DatasetUploadError("Every dataset column must have a non-empty name.")
+    if frame.empty:
+        raise DatasetUploadError("The dataset must contain at least one data row below the header.")
 
 
 async def store_upload(file: UploadFile, data_dir: Path, max_bytes: int) -> StoredDataset:
@@ -75,8 +85,8 @@ async def store_upload(file: UploadFile, data_dir: Path, max_bytes: int) -> Stor
             while chunk := await file.read(CHUNK_SIZE):
                 size += len(chunk)
                 if size > max_bytes:
-                    raise DatasetUploadError(
-                        f"The dataset exceeds the {max_bytes // (1024 * 1024)} MB upload limit."
+                    raise DatasetTooLargeError(
+                        f"The dataset exceeds the {_display_size_limit(max_bytes)} upload limit."
                     )
                 digest.update(chunk)
                 output.write(chunk)

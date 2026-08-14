@@ -3,21 +3,40 @@
 from __future__ import annotations
 
 import uuid
+import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import JSONResponse
 
 from app.api.auth import require_api_key
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.schema import Dataset
 from app.services.data_model import DataModelError, ModelSource, inspect_data_model
-from app.services.datasets import DatasetUploadError, store_upload
+from app.services.datasets import DatasetTooLargeError, DatasetUploadError, store_upload
 from app.services.tabular import json_value, load_dataframe, profile_dataset
 from pydantic import BaseModel, Field
 from app.services.sql_sources import SqlSourceError, snapshot_sql_query
 
 router = APIRouter(tags=["datasets"], dependencies=[Depends(require_api_key)])
+logger = logging.getLogger(__name__)
+
+
+def _upload_error(
+    request: Request, *, status_code: int, code: str, message: str
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": {
+                "code": code,
+                "message": message,
+                "request_id": str(getattr(request.state, "request_id", "unknown")),
+                "fields": [],
+            }
+        },
+    )
 
 
 class DataModelRequest(BaseModel):
@@ -43,18 +62,43 @@ def model_sources(datasets: list[Dataset]) -> list[ModelSource]:
 
 
 @router.post("/datasets", status_code=status.HTTP_201_CREATED)
-async def upload_dataset(file: UploadFile = File(...)):
+async def upload_dataset(request: Request, file: UploadFile = File(...)):
     try:
         stored = await store_upload(file, settings.DATA_DIR, settings.MAX_UPLOAD_BYTES)
+    except DatasetTooLargeError as exc:
+        return _upload_error(
+            request,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            code="dataset_too_large",
+            message=str(exc),
+        )
     except DatasetUploadError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+        return _upload_error(
+            request,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="invalid_dataset",
+            message=str(exc),
+        )
 
-    profile = profile_dataset(stored.path)
-    frame = load_dataframe(stored.path)
-    preview = [
-        {str(column): json_value(value) for column, value in row.items()}
-        for row in frame.head(8).to_dict(orient="records")
-    ]
+    try:
+        profile = profile_dataset(stored.path)
+        frame = load_dataframe(stored.path)
+        preview = [
+            {str(column): json_value(value) for column, value in row.items()}
+            for row in frame.head(8).to_dict(orient="records")
+        ]
+    except Exception:
+        Path(stored.path).unlink(missing_ok=True)
+        logger.exception(
+            "Dataset profiling failed request_id=%s",
+            getattr(request.state, "request_id", "unknown"),
+        )
+        return _upload_error(
+            request,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="dataset_processing_failed",
+            message="The dataset could not be processed.",
+        )
     db = SessionLocal()
     try:
         dataset = Dataset(
@@ -77,8 +121,18 @@ async def upload_dataset(file: UploadFile = File(...)):
             "preview": preview,
         }
     except Exception:
+        db.rollback()
         Path(stored.path).unlink(missing_ok=True)
-        raise
+        logger.exception(
+            "Dataset registration failed request_id=%s",
+            getattr(request.state, "request_id", "unknown"),
+        )
+        return _upload_error(
+            request,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="dataset_registration_failed",
+            message="The dataset could not be registered.",
+        )
     finally:
         db.close()
 

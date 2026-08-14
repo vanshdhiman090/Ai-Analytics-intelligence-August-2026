@@ -6,6 +6,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const revenueFile = path.join(here, "fixtures", "rca-revenue.csv");
 
 const DATASET_ID = "11111111-1111-4111-8111-111111111111";
+const DATASET_B_ID = "33333333-3333-4333-8333-333333333333";
 const INVESTIGATION_ID = "22222222-2222-4222-8222-222222222222";
 
 function profileColumn(name, semanticType, uniqueCount, extras = {}) {
@@ -30,6 +31,48 @@ function datasetResponse() {
         device: profileColumn("device", "categorical", 2),
         customer_type: profileColumn("customer_type", "categorical", 2),
         order_id: profileColumn("order_id", "text", 8),
+        constant_field: profileColumn("constant_field", "categorical", 1),
+      },
+    },
+    preview: [],
+  };
+}
+
+function replacementDatasetResponse() {
+  return {
+    dataset_id: DATASET_B_ID,
+    filename: "replacement-sales.csv",
+    size_bytes: 4096,
+    profile: {
+      row_count: 4,
+      column_count: 3,
+      duplicate_row_count: 0,
+      all_null_columns: [],
+      constant_columns: [],
+      columns: {
+        occurred_at: profileColumn("occurred_at", "datetime", 2, { date_semantics: { status: "CONFIDENT_DATE_FORMAT", min_date: "2026-03-01T00:00:00", max_date: "2026-04-01T00:00:00", missing_months: [] } }),
+        sales: profileColumn("sales", "numeric", 4),
+        region: profileColumn("region", "categorical", 2),
+      },
+    },
+    preview: [],
+  };
+}
+
+function unusableSchemaDatasetResponse() {
+  return {
+    dataset_id: DATASET_B_ID,
+    filename: "unusable-schema.csv",
+    size_bytes: 1024,
+    profile: {
+      row_count: 3,
+      column_count: 3,
+      duplicate_row_count: 0,
+      all_null_columns: [],
+      constant_columns: ["constant_field"],
+      columns: {
+        event_date: profileColumn("event_date", "text", 3, { date_semantics: { status: "INVALID_DATE_COLUMN", min_date: null, max_date: null, missing_months: [] } }),
+        revenue_label: profileColumn("revenue_label", "text", 3),
         constant_field: profileColumn("constant_field", "categorical", 1),
       },
     },
@@ -90,20 +133,29 @@ function inconclusiveResponse() {
 
 async function mockApi(page, options = {}) {
   const payloads = [];
+  let uploadAttempt = 0;
+  let rcaAttempt = 0;
   await page.route("http://127.0.0.1:8000/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     if (url.pathname === "/datasets" && request.method() === "POST") {
+      const currentUploadAttempt = uploadAttempt++;
+      const scripted = options.uploadSequence?.[currentUploadAttempt];
+      if (scripted?.abort || options.abortUpload) return route.abort();
+      if (scripted?.error) return route.fulfill({ status: scripted.error.status, headers: { "X-Request-ID": scripted.error.body.error.request_id }, json: scripted.error.body });
       if (options.uploadError) return route.fulfill({ status: 400, json: { detail: options.uploadError } });
-      return route.fulfill({ status: 201, json: datasetResponse() });
+      return route.fulfill({ status: 201, json: scripted?.response || options.datasetResponses?.[currentUploadAttempt] || datasetResponse() });
     }
-    if (url.pathname === `/datasets/${DATASET_ID}` && request.method() === "DELETE") return route.fulfill({ status: 204, body: "" });
+    if ([`/datasets/${DATASET_ID}`, `/datasets/${DATASET_B_ID}`].includes(url.pathname) && request.method() === "DELETE") return route.fulfill({ status: 204, body: "" });
     if (url.pathname === "/v1/rca/investigations" && request.method() === "POST") {
       payloads.push(request.postDataJSON());
-      if (options.abortRca) return route.abort();
-      if (options.delay) await new Promise((resolve) => setTimeout(resolve, options.delay));
-      if (options.rcaError) return route.fulfill({ status: options.rcaError.status, headers: { "X-Request-ID": options.rcaError.body.error.request_id }, json: options.rcaError.body });
-      return route.fulfill({ status: 200, json: options.rcaResponse || successResponse() });
+      const currentRcaAttempt = rcaAttempt++;
+      const scripted = options.rcaSequence?.[currentRcaAttempt];
+      if (scripted?.abort || options.abortRca) return route.abort();
+      if (scripted?.delay || options.delay) await new Promise((resolve) => setTimeout(resolve, scripted?.delay || options.delay));
+      const error = scripted?.error || options.rcaError;
+      if (error) return route.fulfill({ status: error.status, headers: { "X-Request-ID": error.body.error.request_id }, json: error.body });
+      return route.fulfill({ status: 200, json: scripted?.response || options.rcaResponse || successResponse() });
     }
     return route.fulfill({ status: 404, json: { detail: `Unhandled test route ${url.pathname}` } });
   });
@@ -159,6 +211,7 @@ test("single-dataset RCA flow submits the exact public request and renders signe
   await expect(pathNodes.nth(2)).toContainText("Mobile");
   await expect(pathNodes.nth(3)).toContainText("Returning");
   await expect(page.getByRole("heading", { name: "Leading tested contributor", exact: true })).toBeVisible();
+  await expect(page.locator("label.dimension-option", { hasText: "Constant Field" })).toHaveCount(0);
   await expect(page.getByText("+111.8%", { exact: true }).first()).toBeVisible();
   await expect(page.locator(".decomposition-grid div", { hasText: "Positive offsets" })).toContainText("+");
   await expect(page.getByText("Remaining movement across other segments in this decomposition", { exact: true })).toBeVisible();
@@ -253,6 +306,80 @@ test("upload and network failures are safe and preserve recoverable state", asyn
   await expect(page.getByLabel("KPI name")).toHaveValue("Revenue");
   await expect(page.getByLabel("Comparison period", { exact: true })).toHaveValue("2026-02");
   await expect(page.locator("label.dimension-option.selected")).toHaveCount(3);
+});
+
+test("upload network and size failures remain retryable and expose correlation IDs", async ({ page }) => {
+  await mockApi(page, { abortUpload: true });
+  await page.goto("/");
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.locator(".api-error")).toContainText("cannot be reached");
+  await expect(page.getByRole("heading", { name: "Define the additive KPI" })).toHaveCount(0);
+
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await mockApi(page, { uploadSequence: [{ error: { status: 413, body: { error: { code: "dataset_too_large", message: "The dataset exceeds the 25 MB upload limit.", request_id: "upload-limit-8", fields: [] } } } }, { response: datasetResponse() }] });
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.locator(".api-error")).toContainText("25 MB upload limit");
+  await expect(page.locator(".api-error")).toContainText("upload-limit-8");
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.getByRole("heading", { name: "Define the additive KPI" })).toBeVisible();
+});
+
+test("an uploaded schema without numeric KPI or safe date candidates is bounded before submission", async ({ page }) => {
+  await mockApi(page, { datasetResponses: [unusableSchemaDatasetResponse()] });
+  await page.goto("/");
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.getByText("This dataset has no usable numeric KPI column.")).toBeVisible();
+  await expect(page.getByText("This dataset has no confidently parsed date column.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review investigation" })).toBeDisabled();
+  await expect(page.locator("label.dimension-option", { hasText: "Constant Field" })).toHaveCount(0);
+});
+
+for (const failure of [
+  { name: "dataset unavailable", status: 409, code: "dataset_unavailable", message: "The requested dataset is unavailable.", requestId: "dataset-gone-5" },
+  { name: "unexpected backend failure", status: 500, code: "investigation_failed", message: "The RCA investigation could not be completed.", requestId: "server-failure-6" },
+]) {
+  test(`RCA ${failure.name} preserves configuration and supports a real retry`, async ({ page }) => {
+    const error = { status: failure.status, body: { error: { code: failure.code, message: failure.message, request_id: failure.requestId, fields: [] } } };
+    await mockApi(page, { rcaSequence: [{ error }, { response: successResponse() }] });
+    await uploadAndConfigure(page);
+    await page.getByRole("button", { name: "Start investigation" }).click();
+    await expect(page.locator(".api-error")).toContainText(failure.message);
+    await expect(page.locator(".api-error")).toContainText(failure.requestId);
+    await expect(page.getByTestId("rca-result")).toHaveCount(0);
+    await expect(page.getByLabel("KPI name")).toHaveValue("Revenue");
+    await expect(page.locator("label.dimension-option.selected")).toHaveCount(3);
+    await page.getByRole("button", { name: "Review investigation" }).click();
+    await page.getByRole("button", { name: "Start investigation" }).click();
+    await expect(page.getByTestId("rca-result")).toBeVisible();
+  });
+}
+
+test("rapid repeated start actions produce only one in-flight investigation", async ({ page }) => {
+  const payloads = await mockApi(page, { delay: 250 });
+  await uploadAndConfigure(page);
+  await page.getByRole("button", { name: "Start investigation" }).evaluate((button) => {
+    button.click();
+    button.click();
+  });
+  await expect(page.getByTestId("rca-result")).toBeVisible();
+  expect(payloads).toHaveLength(1);
+});
+
+test("successful dataset replacement clears every stale analytical choice and result", async ({ page }) => {
+  await mockApi(page, { datasetResponses: [datasetResponse(), replacementDatasetResponse()] });
+  await uploadAndConfigure(page);
+  await runInvestigation(page);
+  await page.getByRole("button", { name: "Revise inputs" }).click();
+  await page.locator("#replace-dataset").setInputFiles(revenueFile);
+
+  await expect(page.getByRole("heading", { name: "replacement-sales.csv" })).toBeVisible();
+  await expect(page.getByLabel("Metric column")).toHaveValue("sales");
+  await expect(page.getByLabel("KPI name")).toHaveValue("Sales");
+  await expect(page.getByLabel("Time column")).toHaveValue("occurred_at");
+  await expect(page.getByLabel("Baseline period", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Comparison period", { exact: true })).toHaveValue("");
+  await expect(page.locator("label.dimension-option.selected")).toHaveCount(0);
+  await expect(page.getByTestId("rca-result")).toHaveCount(0);
 });
 
 test("workspace is responsive on mobile without horizontal overflow", async ({ page }) => {

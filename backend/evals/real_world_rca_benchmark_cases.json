@@ -1,0 +1,353 @@
+{
+  "suite_version": "1.0",
+  "cases": [
+    {
+      "id": "A_clear_ecommerce_driver",
+      "scenario": "Existing clear ecommerce driver",
+      "dataset_path": "demo-data/rca-revenue-incident.csv",
+      "record_id_column": "order_id",
+      "shuffle": true,
+      "request": {
+        "goal": "Investigate the February 2026 revenue decline against January 2026.",
+        "kpi": {
+          "name": "Revenue",
+          "metric_column": "revenue",
+          "time_column": "date",
+          "time_grain": "month",
+          "aggregation": "sum",
+          "unit": "EUR"
+        },
+        "baseline_period": "2026-01",
+        "comparison_period": "2026-02",
+        "candidate_dimensions": [
+          "country",
+          "device",
+          "customer_type",
+          "acquisition_channel"
+        ]
+      },
+      "ground_truth": {
+        "row_count": 320,
+        "baseline_value": 16000,
+        "comparison_value": 14600,
+        "signed_change": -1400
+      },
+      "expected": {
+        "public_kpi": {
+          "baseline_value": 16000,
+          "comparison_value": 14600,
+          "signed_change": -1400
+        },
+        "path": [
+          {
+            "dimension": "country",
+            "segment": "Germany",
+            "signed_change": -1200,
+            "local_contribution_pct": 85.71428571428571
+          },
+          {
+            "dimension": "device",
+            "segment": "Mobile",
+            "signed_change": -1100,
+            "local_contribution_pct": 91.66666666666666
+          },
+          {
+            "dimension": "customer_type",
+            "segment": "Returning",
+            "signed_change": -1400,
+            "local_contribution_pct": 127.27272727272727
+          }
+        ],
+        "claim": "leading_tested_contributor",
+        "terminal_status": "bounded_by_max_depth",
+        "readiness": {
+          "status": "ready_with_caveats",
+          "reason": null
+        },
+        "robustness": {
+          "status": "not_verified",
+          "applies_to_selected_target": false
+        },
+        "data_quality": {
+          "status": "pass",
+          "issue_codes": []
+        },
+        "decomposition": {
+          "reconciles": true,
+          "reconciliation_residual": 0,
+          "parent_movement": -1100,
+          "leading_segment_movement": -1400,
+          "remaining_segment_movement": 300,
+          "positive_offsets": 300
+        }
+      }
+    },
+    {
+      "id": "B_competing_explanations",
+      "scenario": "Competing explanations",
+      "dataset_path": "demo-data/benchmarks/competing-explanations.csv",
+      "record_id_column": "order_id",
+      "shuffle": true,
+      "request": {
+        "goal": "Investigate the February 2026 revenue decline against January 2026.",
+        "kpi": {
+          "name": "Revenue",
+          "metric_column": "revenue",
+          "time_column": "date",
+          "time_grain": "month",
+          "aggregation": "sum",
+          "unit": "EUR"
+        },
+        "baseline_period": "2026-01",
+        "comparison_period": "2026-02",
+        "candidate_dimensions": [
+          "country",
+          "device"
+        ]
+      },
+      "ground_truth": {
+        "row_count": 320,
+        "baseline_value": 16000,
+        "comparison_value": 14800,
+        "signed_change": -1200
+      },
+      "expected": {
+        "public_kpi": {
+          "baseline_value": 16000,
+          "comparison_value": 14800,
+          "signed_change": -1200
+        },
+        "path": [
+          {
+            "dimension": "country",
+            "segment": "Germany",
+            "signed_change": -1000,
+            "local_contribution_pct": 83.33333333333334
+          },
+          {
+            "dimension": "device",
+            "segment": "Mobile",
+            "signed_change": -800,
+            "local_contribution_pct": 80
+          }
+        ],
+        "claim": "competing_explanations",
+        "terminal_status": "inconclusive",
+        "readiness": {
+          "status": "not_ready",
+          "reason": "competing_explanations"
+        },
+        "robustness": {
+          "status": "not_verified",
+          "applies_to_selected_target": false
+        },
+        "data_quality": {
+          "status": "pass",
+          "issue_codes": []
+        },
+        "decomposition": {
+          "reconciles": true,
+          "reconciliation_residual": 0,
+          "parent_movement": -1000,
+          "leading_segment_movement": -800,
+          "remaining_segment_movement": -200,
+          "positive_offsets": 0
+        }
+      }
+    },
+    {
+      "id": "C_data_quality_abstention",
+      "scenario": "Data-quality abstention",
+      "dataset_path": "demo-data/benchmarks/data-quality-abstention.csv",
+      "record_id_column": "order_id",
+      "shuffle": false,
+      "request": {
+        "goal": "Investigate the February 2026 revenue decline against January 2026.",
+        "kpi": {
+          "name": "Revenue",
+          "metric_column": "revenue",
+          "time_column": "date",
+          "time_grain": "month",
+          "aggregation": "sum",
+          "unit": "EUR"
+        },
+        "baseline_period": "2026-01",
+        "comparison_period": "2026-02",
+        "candidate_dimensions": [
+          "country",
+          "device",
+          "customer_type",
+          "acquisition_channel"
+        ]
+      },
+      "ground_truth": {
+        "row_count": 224,
+        "baseline_value": 16000,
+        "comparison_value": 6400,
+        "signed_change": -9600
+      },
+      "expected": {
+        "public_kpi": {
+          "baseline_value": null,
+          "comparison_value": null,
+          "signed_change": null
+        },
+        "path": [],
+        "claim": "data_quality_abstention",
+        "terminal_status": "blocked_by_data_quality",
+        "readiness": {
+          "status": "not_ready",
+          "reason": "data_quality"
+        },
+        "robustness": {
+          "status": "abstained",
+          "applies_to_selected_target": false
+        },
+        "data_quality": {
+          "status": "blocked",
+          "issue_codes": [
+            "comparison_coverage_incomplete"
+          ],
+          "selected_target_issue": true
+        },
+        "decomposition": null
+      }
+    },
+    {
+      "id": "D_no_material_driver",
+      "scenario": "No material driver",
+      "dataset_path": "demo-data/benchmarks/no-material-driver.csv",
+      "record_id_column": "order_id",
+      "shuffle": false,
+      "request": {
+        "goal": "Investigate the February 2026 revenue decline against January 2026.",
+        "kpi": {
+          "name": "Revenue",
+          "metric_column": "revenue",
+          "time_column": "date",
+          "time_grain": "month",
+          "aggregation": "sum",
+          "unit": "EUR"
+        },
+        "baseline_period": "2026-01",
+        "comparison_period": "2026-02",
+        "candidate_dimensions": [
+          "country",
+          "device",
+          "customer_type",
+          "acquisition_channel"
+        ]
+      },
+      "ground_truth": {
+        "row_count": 60,
+        "baseline_value": 3600,
+        "comparison_value": 3540,
+        "signed_change": -60
+      },
+      "expected": {
+        "public_kpi": {
+          "baseline_value": 3600,
+          "comparison_value": 3540,
+          "signed_change": -60
+        },
+        "path": [],
+        "claim": "inconclusive",
+        "terminal_status": "no_material_driver",
+        "readiness": {
+          "status": "not_ready",
+          "reason": "insufficient_evidence"
+        },
+        "robustness": {
+          "status": "not_verified",
+          "applies_to_selected_target": false
+        },
+        "data_quality": {
+          "status": "pass",
+          "issue_codes": []
+        },
+        "decomposition": null
+      }
+    },
+    {
+      "id": "E_operations_late_units",
+      "scenario": "Operations late units",
+      "dataset_path": "demo-data/benchmarks/operations-late-units.csv",
+      "record_id_column": "shipment_id",
+      "shuffle": true,
+      "request": {
+        "goal": "Investigate the February 2026 increase in late shipment units against January 2026.",
+        "kpi": {
+          "name": "Late shipment units",
+          "metric_column": "late_units",
+          "time_column": "date",
+          "time_grain": "month",
+          "aggregation": "sum",
+          "unit": "units"
+        },
+        "baseline_period": "2026-01",
+        "comparison_period": "2026-02",
+        "candidate_dimensions": [
+          "region",
+          "carrier",
+          "warehouse",
+          "product_category"
+        ]
+      },
+      "ground_truth": {
+        "row_count": 320,
+        "baseline_value": 1600,
+        "comparison_value": 1740,
+        "signed_change": 140
+      },
+      "expected": {
+        "public_kpi": {
+          "baseline_value": 1600,
+          "comparison_value": 1740,
+          "signed_change": 140
+        },
+        "path": [
+          {
+            "dimension": "region",
+            "segment": "Europe",
+            "signed_change": 120,
+            "local_contribution_pct": 85.71428571428571
+          },
+          {
+            "dimension": "carrier",
+            "segment": "Carrier B",
+            "signed_change": 110,
+            "local_contribution_pct": 91.66666666666666
+          },
+          {
+            "dimension": "warehouse",
+            "segment": "Warehouse North",
+            "signed_change": 140,
+            "local_contribution_pct": 127.27272727272727
+          }
+        ],
+        "claim": "leading_tested_contributor",
+        "terminal_status": "bounded_by_max_depth",
+        "readiness": {
+          "status": "ready_with_caveats",
+          "reason": null
+        },
+        "robustness": {
+          "status": "not_verified",
+          "applies_to_selected_target": false
+        },
+        "data_quality": {
+          "status": "pass",
+          "issue_codes": []
+        },
+        "decomposition": {
+          "reconciles": true,
+          "reconciliation_residual": 0,
+          "parent_movement": 110,
+          "leading_segment_movement": 140,
+          "remaining_segment_movement": -30,
+          "positive_offsets": 140
+        }
+      }
+    }
+  ]
+}

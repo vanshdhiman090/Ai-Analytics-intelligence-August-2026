@@ -1,0 +1,61 @@
+date,order_id,revenue,country,device,customer_type,acquisition_channel
+2026-01-01,ORD-00001,120,Germany,Mobile,Returning,Organic Search
+2026-01-08,ORD-00002,120,Germany,Mobile,Returning,Organic Search
+2026-01-15,ORD-00003,120,Germany,Mobile,Returning,Organic Search
+2026-01-22,ORD-00004,120,Germany,Mobile,Returning,Organic Search
+2026-01-31,ORD-00005,120,Germany,Mobile,Returning,Organic Search
+2026-02-01,ORD-00006,118,Germany,Mobile,Returning,Organic Search
+2026-02-07,ORD-00007,118,Germany,Mobile,Returning,Organic Search
+2026-02-14,ORD-00008,118,Germany,Mobile,Returning,Organic Search
+2026-02-21,ORD-00009,118,Germany,Mobile,Returning,Organic Search
+2026-02-28,ORD-00010,118,Germany,Mobile,Returning,Organic Search
+2026-01-01,ORD-00011,120,France,Desktop,New,Paid Search
+2026-01-08,ORD-00012,120,France,Desktop,New,Paid Search
+2026-01-15,ORD-00013,120,France,Desktop,New,Paid Search
+2026-01-22,ORD-00014,120,France,Desktop,New,Paid Search
+2026-01-31,ORD-00015,120,France,Desktop,New,Paid Search
+2026-02-01,ORD-00016,118,France,Desktop,New,Paid Search
+2026-02-07,ORD-00017,118,France,Desktop,New,Paid Search
+2026-02-14,ORD-00018,118,France,Desktop,New,Paid Search
+2026-02-21,ORD-00019,118,France,Desktop,New,Paid Search
+2026-02-28,ORD-00020,118,France,Desktop,New,Paid Search
+2026-01-01,ORD-00021,120,United Kingdom,Tablet,Guest,Email
+2026-01-08,ORD-00022,120,United Kingdom,Tablet,Guest,Email
+2026-01-15,ORD-00023,120,United Kingdom,Tablet,Guest,Email
+2026-01-22,ORD-00024,120,United Kingdom,Tablet,Guest,Email
+2026-01-31,ORD-00025,120,United Kingdom,Tablet,Guest,Email
+2026-02-01,ORD-00026,118,United Kingdom,Tablet,Guest,Email
+2026-02-07,ORD-00027,118,United Kingdom,Tablet,Guest,Email
+2026-02-14,ORD-00028,118,United Kingdom,Tablet,Guest,Email
+2026-02-21,ORD-00029,118,United Kingdom,Tablet,Guest,Email
+2026-02-28,ORD-00030,118,United Kingdom,Tablet,Guest,Email
+2026-01-01,ORD-00031,120,Spain,Console,Trial,Affiliate
+2026-01-08,ORD-00032,120,Spain,Console,Trial,Affiliate
+2026-01-15,ORD-00033,120,Spain,Console,Trial,Affiliate
+2026-01-22,ORD-00034,120,Spain,Console,Trial,Affiliate
+2026-01-31,ORD-00035,120,Spain,Console,Trial,Affiliate
+2026-02-01,ORD-00036,118,Spain,Console,Trial,Affiliate
+2026-02-07,ORD-00037,118,Spain,Console,Trial,Affiliate
+2026-02-14,ORD-00038,118,Spain,Console,Trial,Affiliate
+2026-02-21,ORD-00039,118,Spain,Console,Trial,Affiliate
+2026-02-28,ORD-00040,118,Spain,Console,Trial,Affiliate
+2026-01-01,ORD-00041,120,Italy,TV,Loyal,Direct
+2026-01-08,ORD-00042,120,Italy,TV,Loyal,Direct
+2026-01-15,ORD-00043,120,Italy,TV,Loyal,Direct
+2026-01-22,ORD-00044,120,Italy,TV,Loyal,Direct
+2026-01-31,ORD-00045,120,Italy,TV,Loyal,Direct
+2026-02-01,ORD-00046,118,Italy,TV,Loyal,Direct
+2026-02-07,ORD-00047,118,Italy,TV,Loyal,Direct
+2026-02-14,ORD-00048,118,Italy,TV,Loyal,Direct
+2026-02-21,ORD-00049,118,Italy,TV,Loyal,Direct
+2026-02-28,ORD-00050,118,Italy,TV,Loyal,Direct
+2026-01-01,ORD-00051,120,Poland,Other,Unknown,Referral
+2026-01-08,ORD-00052,120,Poland,Other,Unknown,Referral
+2026-01-15,ORD-00053,120,Poland,Other,Unknown,Referral
+2026-01-22,ORD-00054,120,Poland,Other,Unknown,Referral
+2026-01-31,ORD-00055,120,Poland,Other,Unknown,Referral
+2026-02-01,ORD-00056,118,Poland,Other,Unknown,Referral
+2026-02-07,ORD-00057,118,Poland,Other,Unknown,Referral
+2026-02-14,ORD-00058,118,Poland,Other,Unknown,Referral
+2026-02-21,ORD-00059,118,Poland,Other,Unknown,Referral
+2026-02-28,ORD-00060,118,Poland,Other,Unknown,Referral

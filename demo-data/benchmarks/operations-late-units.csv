@@ -1,0 +1,321 @@
+date,shipment_id,late_units,region,carrier,warehouse,product_category
+2026-01-01,SHP-00001,10,Europe,Carrier B,Warehouse North,Consumer
+2026-01-08,SHP-00002,10,Europe,Carrier B,Warehouse North,Consumer
+2026-01-15,SHP-00003,10,Europe,Carrier B,Warehouse North,Consumer
+2026-01-22,SHP-00004,10,Europe,Carrier B,Warehouse North,Consumer
+2026-01-31,SHP-00005,10,Europe,Carrier B,Warehouse North,Consumer
+2026-02-01,SHP-00006,24,Europe,Carrier B,Warehouse North,Consumer
+2026-02-07,SHP-00007,24,Europe,Carrier B,Warehouse North,Consumer
+2026-02-14,SHP-00008,24,Europe,Carrier B,Warehouse North,Consumer
+2026-02-21,SHP-00009,24,Europe,Carrier B,Warehouse North,Consumer
+2026-02-28,SHP-00010,24,Europe,Carrier B,Warehouse North,Consumer
+2026-01-01,SHP-00011,10,Europe,Carrier B,Warehouse North,Industrial
+2026-01-08,SHP-00012,10,Europe,Carrier B,Warehouse North,Industrial
+2026-01-15,SHP-00013,10,Europe,Carrier B,Warehouse North,Industrial
+2026-01-22,SHP-00014,10,Europe,Carrier B,Warehouse North,Industrial
+2026-01-31,SHP-00015,10,Europe,Carrier B,Warehouse North,Industrial
+2026-02-01,SHP-00016,24,Europe,Carrier B,Warehouse North,Industrial
+2026-02-07,SHP-00017,24,Europe,Carrier B,Warehouse North,Industrial
+2026-02-14,SHP-00018,24,Europe,Carrier B,Warehouse North,Industrial
+2026-02-21,SHP-00019,24,Europe,Carrier B,Warehouse North,Industrial
+2026-02-28,SHP-00020,24,Europe,Carrier B,Warehouse North,Industrial
+2026-01-01,SHP-00021,10,Europe,Carrier B,Warehouse South,Consumer
+2026-01-08,SHP-00022,10,Europe,Carrier B,Warehouse South,Consumer
+2026-01-15,SHP-00023,10,Europe,Carrier B,Warehouse South,Consumer
+2026-01-22,SHP-00024,10,Europe,Carrier B,Warehouse South,Consumer
+2026-01-31,SHP-00025,10,Europe,Carrier B,Warehouse South,Consumer
+2026-02-01,SHP-00026,7,Europe,Carrier B,Warehouse South,Consumer
+2026-02-07,SHP-00027,7,Europe,Carrier B,Warehouse South,Consumer
+2026-02-14,SHP-00028,7,Europe,Carrier B,Warehouse South,Consumer
+2026-02-21,SHP-00029,7,Europe,Carrier B,Warehouse South,Consumer
+2026-02-28,SHP-00030,7,Europe,Carrier B,Warehouse South,Consumer
+2026-01-01,SHP-00031,10,Europe,Carrier B,Warehouse South,Industrial
+2026-01-08,SHP-00032,10,Europe,Carrier B,Warehouse South,Industrial
+2026-01-15,SHP-00033,10,Europe,Carrier B,Warehouse South,Industrial
+2026-01-22,SHP-00034,10,Europe,Carrier B,Warehouse South,Industrial
+2026-01-31,SHP-00035,10,Europe,Carrier B,Warehouse South,Industrial
+2026-02-01,SHP-00036,7,Europe,Carrier B,Warehouse South,Industrial
+2026-02-07,SHP-00037,7,Europe,Carrier B,Warehouse South,Industrial
+2026-02-14,SHP-00038,7,Europe,Carrier B,Warehouse South,Industrial
+2026-02-21,SHP-00039,7,Europe,Carrier B,Warehouse South,Industrial
+2026-02-28,SHP-00040,7,Europe,Carrier B,Warehouse South,Industrial
+2026-01-01,SHP-00041,10,Europe,Carrier A,Warehouse North,Consumer
+2026-01-08,SHP-00042,10,Europe,Carrier A,Warehouse North,Consumer
+2026-01-15,SHP-00043,10,Europe,Carrier A,Warehouse North,Consumer
+2026-01-22,SHP-00044,10,Europe,Carrier A,Warehouse North,Consumer
+2026-01-31,SHP-00045,10,Europe,Carrier A,Warehouse North,Consumer
+2026-02-01,SHP-00046,2,Europe,Carrier A,Warehouse North,Consumer
+2026-02-07,SHP-00047,2,Europe,Carrier A,Warehouse North,Consumer
+2026-02-14,SHP-00048,2,Europe,Carrier A,Warehouse North,Consumer
+2026-02-21,SHP-00049,2,Europe,Carrier A,Warehouse North,Consumer
+2026-02-28,SHP-00050,2,Europe,Carrier A,Warehouse North,Consumer
+2026-01-01,SHP-00051,10,Europe,Carrier A,Warehouse North,Industrial
+2026-01-08,SHP-00052,10,Europe,Carrier A,Warehouse North,Industrial
+2026-01-15,SHP-00053,10,Europe,Carrier A,Warehouse North,Industrial
+2026-01-22,SHP-00054,10,Europe,Carrier A,Warehouse North,Industrial
+2026-01-31,SHP-00055,10,Europe,Carrier A,Warehouse North,Industrial
+2026-02-01,SHP-00056,2,Europe,Carrier A,Warehouse North,Industrial
+2026-02-07,SHP-00057,2,Europe,Carrier A,Warehouse North,Industrial
+2026-02-14,SHP-00058,2,Europe,Carrier A,Warehouse North,Industrial
+2026-02-21,SHP-00059,2,Europe,Carrier A,Warehouse North,Industrial
+2026-02-28,SHP-00060,2,Europe,Carrier A,Warehouse North,Industrial
+2026-01-01,SHP-00061,10,Europe,Carrier A,Warehouse South,Consumer
+2026-01-08,SHP-00062,10,Europe,Carrier A,Warehouse South,Consumer
+2026-01-15,SHP-00063,10,Europe,Carrier A,Warehouse South,Consumer
+2026-01-22,SHP-00064,10,Europe,Carrier A,Warehouse South,Consumer
+2026-01-31,SHP-00065,10,Europe,Carrier A,Warehouse South,Consumer
+2026-02-01,SHP-00066,19,Europe,Carrier A,Warehouse South,Consumer
+2026-02-07,SHP-00067,19,Europe,Carrier A,Warehouse South,Consumer
+2026-02-14,SHP-00068,19,Europe,Carrier A,Warehouse South,Consumer
+2026-02-21,SHP-00069,19,Europe,Carrier A,Warehouse South,Consumer
+2026-02-28,SHP-00070,19,Europe,Carrier A,Warehouse South,Consumer
+2026-01-01,SHP-00071,10,Europe,Carrier A,Warehouse South,Industrial
+2026-01-08,SHP-00072,10,Europe,Carrier A,Warehouse South,Industrial
+2026-01-15,SHP-00073,10,Europe,Carrier A,Warehouse South,Industrial
+2026-01-22,SHP-00074,10,Europe,Carrier A,Warehouse South,Industrial
+2026-01-31,SHP-00075,10,Europe,Carrier A,Warehouse South,Industrial
+2026-02-01,SHP-00076,19,Europe,Carrier A,Warehouse South,Industrial
+2026-02-07,SHP-00077,19,Europe,Carrier A,Warehouse South,Industrial
+2026-02-14,SHP-00078,19,Europe,Carrier A,Warehouse South,Industrial
+2026-02-21,SHP-00079,19,Europe,Carrier A,Warehouse South,Industrial
+2026-02-28,SHP-00080,19,Europe,Carrier A,Warehouse South,Industrial
+2026-01-01,SHP-00081,10,North America,Carrier B,Warehouse North,Consumer
+2026-01-08,SHP-00082,10,North America,Carrier B,Warehouse North,Consumer
+2026-01-15,SHP-00083,10,North America,Carrier B,Warehouse North,Consumer
+2026-01-22,SHP-00084,10,North America,Carrier B,Warehouse North,Consumer
+2026-01-31,SHP-00085,10,North America,Carrier B,Warehouse North,Consumer
+2026-02-01,SHP-00086,9,North America,Carrier B,Warehouse North,Consumer
+2026-02-07,SHP-00087,9,North America,Carrier B,Warehouse North,Consumer
+2026-02-14,SHP-00088,9,North America,Carrier B,Warehouse North,Consumer
+2026-02-21,SHP-00089,9,North America,Carrier B,Warehouse North,Consumer
+2026-02-28,SHP-00090,9,North America,Carrier B,Warehouse North,Consumer
+2026-01-01,SHP-00091,10,North America,Carrier B,Warehouse North,Industrial
+2026-01-08,SHP-00092,10,North America,Carrier B,Warehouse North,Industrial
+2026-01-15,SHP-00093,10,North America,Carrier B,Warehouse North,Industrial
+2026-01-22,SHP-00094,10,North America,Carrier B,Warehouse North,Industrial
+2026-01-31,SHP-00095,10,North America,Carrier B,Warehouse North,Industrial
+2026-02-01,SHP-00096,9,North America,Carrier B,Warehouse North,Industrial
+2026-02-07,SHP-00097,9,North America,Carrier B,Warehouse North,Industrial
+2026-02-14,SHP-00098,9,North America,Carrier B,Warehouse North,Industrial
+2026-02-21,SHP-00099,9,North America,Carrier B,Warehouse North,Industrial
+2026-02-28,SHP-00100,9,North America,Carrier B,Warehouse North,Industrial
+2026-01-01,SHP-00101,10,North America,Carrier B,Warehouse South,Consumer
+2026-01-08,SHP-00102,10,North America,Carrier B,Warehouse South,Consumer
+2026-01-15,SHP-00103,10,North America,Carrier B,Warehouse South,Consumer
+2026-01-22,SHP-00104,10,North America,Carrier B,Warehouse South,Consumer
+2026-01-31,SHP-00105,10,North America,Carrier B,Warehouse South,Consumer
+2026-02-01,SHP-00106,9,North America,Carrier B,Warehouse South,Consumer
+2026-02-07,SHP-00107,9,North America,Carrier B,Warehouse South,Consumer
+2026-02-14,SHP-00108,9,North America,Carrier B,Warehouse South,Consumer
+2026-02-21,SHP-00109,9,North America,Carrier B,Warehouse South,Consumer
+2026-02-28,SHP-00110,9,North America,Carrier B,Warehouse South,Consumer
+2026-01-01,SHP-00111,10,North America,Carrier B,Warehouse South,Industrial
+2026-01-08,SHP-00112,10,North America,Carrier B,Warehouse South,Industrial
+2026-01-15,SHP-00113,10,North America,Carrier B,Warehouse South,Industrial
+2026-01-22,SHP-00114,10,North America,Carrier B,Warehouse South,Industrial
+2026-01-31,SHP-00115,10,North America,Carrier B,Warehouse South,Industrial
+2026-02-01,SHP-00116,9,North America,Carrier B,Warehouse South,Industrial
+2026-02-07,SHP-00117,9,North America,Carrier B,Warehouse South,Industrial
+2026-02-14,SHP-00118,9,North America,Carrier B,Warehouse South,Industrial
+2026-02-21,SHP-00119,9,North America,Carrier B,Warehouse South,Industrial
+2026-02-28,SHP-00120,9,North America,Carrier B,Warehouse South,Industrial
+2026-01-01,SHP-00121,10,North America,Carrier A,Warehouse North,Consumer
+2026-01-08,SHP-00122,10,North America,Carrier A,Warehouse North,Consumer
+2026-01-15,SHP-00123,10,North America,Carrier A,Warehouse North,Consumer
+2026-01-22,SHP-00124,10,North America,Carrier A,Warehouse North,Consumer
+2026-01-31,SHP-00125,10,North America,Carrier A,Warehouse North,Consumer
+2026-02-01,SHP-00126,10,North America,Carrier A,Warehouse North,Consumer
+2026-02-07,SHP-00127,10,North America,Carrier A,Warehouse North,Consumer
+2026-02-14,SHP-00128,10,North America,Carrier A,Warehouse North,Consumer
+2026-02-21,SHP-00129,10,North America,Carrier A,Warehouse North,Consumer
+2026-02-28,SHP-00130,10,North America,Carrier A,Warehouse North,Consumer
+2026-01-01,SHP-00131,10,North America,Carrier A,Warehouse North,Industrial
+2026-01-08,SHP-00132,10,North America,Carrier A,Warehouse North,Industrial
+2026-01-15,SHP-00133,10,North America,Carrier A,Warehouse North,Industrial
+2026-01-22,SHP-00134,10,North America,Carrier A,Warehouse North,Industrial
+2026-01-31,SHP-00135,10,North America,Carrier A,Warehouse North,Industrial
+2026-02-01,SHP-00136,10,North America,Carrier A,Warehouse North,Industrial
+2026-02-07,SHP-00137,10,North America,Carrier A,Warehouse North,Industrial
+2026-02-14,SHP-00138,10,North America,Carrier A,Warehouse North,Industrial
+2026-02-21,SHP-00139,10,North America,Carrier A,Warehouse North,Industrial
+2026-02-28,SHP-00140,10,North America,Carrier A,Warehouse North,Industrial
+2026-01-01,SHP-00141,10,North America,Carrier A,Warehouse South,Consumer
+2026-01-08,SHP-00142,10,North America,Carrier A,Warehouse South,Consumer
+2026-01-15,SHP-00143,10,North America,Carrier A,Warehouse South,Consumer
+2026-01-22,SHP-00144,10,North America,Carrier A,Warehouse South,Consumer
+2026-01-31,SHP-00145,10,North America,Carrier A,Warehouse South,Consumer
+2026-02-01,SHP-00146,10,North America,Carrier A,Warehouse South,Consumer
+2026-02-07,SHP-00147,10,North America,Carrier A,Warehouse South,Consumer
+2026-02-14,SHP-00148,10,North America,Carrier A,Warehouse South,Consumer
+2026-02-21,SHP-00149,10,North America,Carrier A,Warehouse South,Consumer
+2026-02-28,SHP-00150,10,North America,Carrier A,Warehouse South,Consumer
+2026-01-01,SHP-00151,10,North America,Carrier A,Warehouse South,Industrial
+2026-01-08,SHP-00152,10,North America,Carrier A,Warehouse South,Industrial
+2026-01-15,SHP-00153,10,North America,Carrier A,Warehouse South,Industrial
+2026-01-22,SHP-00154,10,North America,Carrier A,Warehouse South,Industrial
+2026-01-31,SHP-00155,10,North America,Carrier A,Warehouse South,Industrial
+2026-02-01,SHP-00156,10,North America,Carrier A,Warehouse South,Industrial
+2026-02-07,SHP-00157,10,North America,Carrier A,Warehouse South,Industrial
+2026-02-14,SHP-00158,10,North America,Carrier A,Warehouse South,Industrial
+2026-02-21,SHP-00159,10,North America,Carrier A,Warehouse South,Industrial
+2026-02-28,SHP-00160,10,North America,Carrier A,Warehouse South,Industrial
+2026-01-01,SHP-00161,10,Asia,Carrier B,Warehouse North,Consumer
+2026-01-08,SHP-00162,10,Asia,Carrier B,Warehouse North,Consumer
+2026-01-15,SHP-00163,10,Asia,Carrier B,Warehouse North,Consumer
+2026-01-22,SHP-00164,10,Asia,Carrier B,Warehouse North,Consumer
+2026-01-31,SHP-00165,10,Asia,Carrier B,Warehouse North,Consumer
+2026-02-01,SHP-00166,9.4,Asia,Carrier B,Warehouse North,Consumer
+2026-02-07,SHP-00167,9.4,Asia,Carrier B,Warehouse North,Consumer
+2026-02-14,SHP-00168,9.4,Asia,Carrier B,Warehouse North,Consumer
+2026-02-21,SHP-00169,9.4,Asia,Carrier B,Warehouse North,Consumer
+2026-02-28,SHP-00170,9.4,Asia,Carrier B,Warehouse North,Consumer
+2026-01-01,SHP-00171,10,Asia,Carrier B,Warehouse North,Industrial
+2026-01-08,SHP-00172,10,Asia,Carrier B,Warehouse North,Industrial
+2026-01-15,SHP-00173,10,Asia,Carrier B,Warehouse North,Industrial
+2026-01-22,SHP-00174,10,Asia,Carrier B,Warehouse North,Industrial
+2026-01-31,SHP-00175,10,Asia,Carrier B,Warehouse North,Industrial
+2026-02-01,SHP-00176,9.4,Asia,Carrier B,Warehouse North,Industrial
+2026-02-07,SHP-00177,9.4,Asia,Carrier B,Warehouse North,Industrial
+2026-02-14,SHP-00178,9.4,Asia,Carrier B,Warehouse North,Industrial
+2026-02-21,SHP-00179,9.4,Asia,Carrier B,Warehouse North,Industrial
+2026-02-28,SHP-00180,9.4,Asia,Carrier B,Warehouse North,Industrial
+2026-01-01,SHP-00181,10,Asia,Carrier B,Warehouse South,Consumer
+2026-01-08,SHP-00182,10,Asia,Carrier B,Warehouse South,Consumer
+2026-01-15,SHP-00183,10,Asia,Carrier B,Warehouse South,Consumer
+2026-01-22,SHP-00184,10,Asia,Carrier B,Warehouse South,Consumer
+2026-01-31,SHP-00185,10,Asia,Carrier B,Warehouse South,Consumer
+2026-02-01,SHP-00186,9.4,Asia,Carrier B,Warehouse South,Consumer
+2026-02-07,SHP-00187,9.4,Asia,Carrier B,Warehouse South,Consumer
+2026-02-14,SHP-00188,9.4,Asia,Carrier B,Warehouse South,Consumer
+2026-02-21,SHP-00189,9.4,Asia,Carrier B,Warehouse South,Consumer
+2026-02-28,SHP-00190,9.4,Asia,Carrier B,Warehouse South,Consumer
+2026-01-01,SHP-00191,10,Asia,Carrier B,Warehouse South,Industrial
+2026-01-08,SHP-00192,10,Asia,Carrier B,Warehouse South,Industrial
+2026-01-15,SHP-00193,10,Asia,Carrier B,Warehouse South,Industrial
+2026-01-22,SHP-00194,10,Asia,Carrier B,Warehouse South,Industrial
+2026-01-31,SHP-00195,10,Asia,Carrier B,Warehouse South,Industrial
+2026-02-01,SHP-00196,9.4,Asia,Carrier B,Warehouse South,Industrial
+2026-02-07,SHP-00197,9.4,Asia,Carrier B,Warehouse South,Industrial
+2026-02-14,SHP-00198,9.4,Asia,Carrier B,Warehouse South,Industrial
+2026-02-21,SHP-00199,9.4,Asia,Carrier B,Warehouse South,Industrial
+2026-02-28,SHP-00200,9.4,Asia,Carrier B,Warehouse South,Industrial
+2026-01-01,SHP-00201,10,Asia,Carrier A,Warehouse North,Consumer
+2026-01-08,SHP-00202,10,Asia,Carrier A,Warehouse North,Consumer
+2026-01-15,SHP-00203,10,Asia,Carrier A,Warehouse North,Consumer
+2026-01-22,SHP-00204,10,Asia,Carrier A,Warehouse North,Consumer
+2026-01-31,SHP-00205,10,Asia,Carrier A,Warehouse North,Consumer
+2026-02-01,SHP-00206,11.6,Asia,Carrier A,Warehouse North,Consumer
+2026-02-07,SHP-00207,11.6,Asia,Carrier A,Warehouse North,Consumer
+2026-02-14,SHP-00208,11.6,Asia,Carrier A,Warehouse North,Consumer
+2026-02-21,SHP-00209,11.6,Asia,Carrier A,Warehouse North,Consumer
+2026-02-28,SHP-00210,11.6,Asia,Carrier A,Warehouse North,Consumer
+2026-01-01,SHP-00211,10,Asia,Carrier A,Warehouse North,Industrial
+2026-01-08,SHP-00212,10,Asia,Carrier A,Warehouse North,Industrial
+2026-01-15,SHP-00213,10,Asia,Carrier A,Warehouse North,Industrial
+2026-01-22,SHP-00214,10,Asia,Carrier A,Warehouse North,Industrial
+2026-01-31,SHP-00215,10,Asia,Carrier A,Warehouse North,Industrial
+2026-02-01,SHP-00216,11.6,Asia,Carrier A,Warehouse North,Industrial
+2026-02-07,SHP-00217,11.6,Asia,Carrier A,Warehouse North,Industrial
+2026-02-14,SHP-00218,11.6,Asia,Carrier A,Warehouse North,Industrial
+2026-02-21,SHP-00219,11.6,Asia,Carrier A,Warehouse North,Industrial
+2026-02-28,SHP-00220,11.6,Asia,Carrier A,Warehouse North,Industrial
+2026-01-01,SHP-00221,10,Asia,Carrier A,Warehouse South,Consumer
+2026-01-08,SHP-00222,10,Asia,Carrier A,Warehouse South,Consumer
+2026-01-15,SHP-00223,10,Asia,Carrier A,Warehouse South,Consumer
+2026-01-22,SHP-00224,10,Asia,Carrier A,Warehouse South,Consumer
+2026-01-31,SHP-00225,10,Asia,Carrier A,Warehouse South,Consumer
+2026-02-01,SHP-00226,12.6,Asia,Carrier A,Warehouse South,Consumer
+2026-02-07,SHP-00227,12.6,Asia,Carrier A,Warehouse South,Consumer
+2026-02-14,SHP-00228,12.6,Asia,Carrier A,Warehouse South,Consumer
+2026-02-21,SHP-00229,12.6,Asia,Carrier A,Warehouse South,Consumer
+2026-02-28,SHP-00230,12.6,Asia,Carrier A,Warehouse South,Consumer
+2026-01-01,SHP-00231,10,Asia,Carrier A,Warehouse South,Industrial
+2026-01-08,SHP-00232,10,Asia,Carrier A,Warehouse South,Industrial
+2026-01-15,SHP-00233,10,Asia,Carrier A,Warehouse South,Industrial
+2026-01-22,SHP-00234,10,Asia,Carrier A,Warehouse South,Industrial
+2026-01-31,SHP-00235,10,Asia,Carrier A,Warehouse South,Industrial
+2026-02-01,SHP-00236,12.6,Asia,Carrier A,Warehouse South,Industrial
+2026-02-07,SHP-00237,12.6,Asia,Carrier A,Warehouse South,Industrial
+2026-02-14,SHP-00238,12.6,Asia,Carrier A,Warehouse South,Industrial
+2026-02-21,SHP-00239,12.6,Asia,Carrier A,Warehouse South,Industrial
+2026-02-28,SHP-00240,12.6,Asia,Carrier A,Warehouse South,Industrial
+2026-01-01,SHP-00241,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-01-08,SHP-00242,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-01-15,SHP-00243,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-01-22,SHP-00244,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-01-31,SHP-00245,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-02-01,SHP-00246,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-02-07,SHP-00247,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-02-14,SHP-00248,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-02-21,SHP-00249,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-02-28,SHP-00250,10,Latin America,Carrier B,Warehouse North,Consumer
+2026-01-01,SHP-00251,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-01-08,SHP-00252,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-01-15,SHP-00253,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-01-22,SHP-00254,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-01-31,SHP-00255,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-02-01,SHP-00256,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-02-07,SHP-00257,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-02-14,SHP-00258,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-02-21,SHP-00259,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-02-28,SHP-00260,10,Latin America,Carrier B,Warehouse North,Industrial
+2026-01-01,SHP-00261,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-01-08,SHP-00262,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-01-15,SHP-00263,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-01-22,SHP-00264,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-01-31,SHP-00265,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-02-01,SHP-00266,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-02-07,SHP-00267,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-02-14,SHP-00268,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-02-21,SHP-00269,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-02-28,SHP-00270,10,Latin America,Carrier B,Warehouse South,Consumer
+2026-01-01,SHP-00271,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-01-08,SHP-00272,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-01-15,SHP-00273,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-01-22,SHP-00274,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-01-31,SHP-00275,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-02-01,SHP-00276,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-02-07,SHP-00277,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-02-14,SHP-00278,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-02-21,SHP-00279,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-02-28,SHP-00280,10,Latin America,Carrier B,Warehouse South,Industrial
+2026-01-01,SHP-00281,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-01-08,SHP-00282,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-01-15,SHP-00283,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-01-22,SHP-00284,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-01-31,SHP-00285,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-02-01,SHP-00286,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-02-07,SHP-00287,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-02-14,SHP-00288,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-02-21,SHP-00289,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-02-28,SHP-00290,10,Latin America,Carrier A,Warehouse North,Consumer
+2026-01-01,SHP-00291,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-01-08,SHP-00292,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-01-15,SHP-00293,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-01-22,SHP-00294,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-01-31,SHP-00295,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-02-01,SHP-00296,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-02-07,SHP-00297,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-02-14,SHP-00298,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-02-21,SHP-00299,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-02-28,SHP-00300,10,Latin America,Carrier A,Warehouse North,Industrial
+2026-01-01,SHP-00301,10,Latin America,Carrier A,Warehouse South,Consumer
+2026-01-08,SHP-00302,10,Latin America,Carrier A,Warehouse South,Consumer
+2026-01-15,SHP-00303,10,Latin America,Carrier A,Warehouse South,Consumer
+2026-01-22,SHP-00304,10,Latin America,Carrier A,Warehouse South,Consumer
+2026-01-31,SHP-00305,10,Latin America,Carrier A,Warehouse South,Consumer
+2026-02-01,SHP-00306,11,Latin America,Carrier A,Warehouse South,Consumer
+2026-02-07,SHP-00307,11,Latin America,Carrier A,Warehouse South,Consumer
+2026-02-14,SHP-00308,11,Latin America,Carrier A,Warehouse South,Consumer
+2026-02-21,SHP-00309,11,Latin America,Carrier A,Warehouse South,Consumer
+2026-02-28,SHP-00310,11,Latin America,Carrier A,Warehouse South,Consumer
+2026-01-01,SHP-00311,10,Latin America,Carrier A,Warehouse South,Industrial
+2026-01-08,SHP-00312,10,Latin America,Carrier A,Warehouse South,Industrial
+2026-01-15,SHP-00313,10,Latin America,Carrier A,Warehouse South,Industrial
+2026-01-22,SHP-00314,10,Latin America,Carrier A,Warehouse South,Industrial
+2026-01-31,SHP-00315,10,Latin America,Carrier A,Warehouse South,Industrial
+2026-02-01,SHP-00316,11,Latin America,Carrier A,Warehouse South,Industrial
+2026-02-07,SHP-00317,11,Latin America,Carrier A,Warehouse South,Industrial
+2026-02-14,SHP-00318,11,Latin America,Carrier A,Warehouse South,Industrial
+2026-02-21,SHP-00319,11,Latin America,Carrier A,Warehouse South,Industrial
+2026-02-28,SHP-00320,11,Latin America,Carrier A,Warehouse South,Industrial

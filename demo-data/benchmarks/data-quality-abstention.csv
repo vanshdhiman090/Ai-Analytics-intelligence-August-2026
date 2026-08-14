@@ -1,0 +1,225 @@
+date,order_id,revenue,country,device,customer_type,acquisition_channel
+2026-01-01,ORD-00001,100,Germany,Mobile,Returning,Organic Search
+2026-01-08,ORD-00002,100,Germany,Mobile,Returning,Organic Search
+2026-01-15,ORD-00003,100,Germany,Mobile,Returning,Organic Search
+2026-01-22,ORD-00004,100,Germany,Mobile,Returning,Organic Search
+2026-01-31,ORD-00005,100,Germany,Mobile,Returning,Organic Search
+2026-02-01,ORD-00006,100,Germany,Mobile,Returning,Organic Search
+2026-02-07,ORD-00007,100,Germany,Mobile,Returning,Organic Search
+2026-01-01,ORD-00008,100,Germany,Mobile,Returning,Paid Search
+2026-01-08,ORD-00009,100,Germany,Mobile,Returning,Paid Search
+2026-01-15,ORD-00010,100,Germany,Mobile,Returning,Paid Search
+2026-01-22,ORD-00011,100,Germany,Mobile,Returning,Paid Search
+2026-01-31,ORD-00012,100,Germany,Mobile,Returning,Paid Search
+2026-02-01,ORD-00013,100,Germany,Mobile,Returning,Paid Search
+2026-02-07,ORD-00014,100,Germany,Mobile,Returning,Paid Search
+2026-01-01,ORD-00015,100,Germany,Mobile,New,Organic Search
+2026-01-08,ORD-00016,100,Germany,Mobile,New,Organic Search
+2026-01-15,ORD-00017,100,Germany,Mobile,New,Organic Search
+2026-01-22,ORD-00018,100,Germany,Mobile,New,Organic Search
+2026-01-31,ORD-00019,100,Germany,Mobile,New,Organic Search
+2026-02-01,ORD-00020,100,Germany,Mobile,New,Organic Search
+2026-02-07,ORD-00021,100,Germany,Mobile,New,Organic Search
+2026-01-01,ORD-00022,100,Germany,Mobile,New,Paid Search
+2026-01-08,ORD-00023,100,Germany,Mobile,New,Paid Search
+2026-01-15,ORD-00024,100,Germany,Mobile,New,Paid Search
+2026-01-22,ORD-00025,100,Germany,Mobile,New,Paid Search
+2026-01-31,ORD-00026,100,Germany,Mobile,New,Paid Search
+2026-02-01,ORD-00027,100,Germany,Mobile,New,Paid Search
+2026-02-07,ORD-00028,100,Germany,Mobile,New,Paid Search
+2026-01-01,ORD-00029,100,Germany,Desktop,Returning,Organic Search
+2026-01-08,ORD-00030,100,Germany,Desktop,Returning,Organic Search
+2026-01-15,ORD-00031,100,Germany,Desktop,Returning,Organic Search
+2026-01-22,ORD-00032,100,Germany,Desktop,Returning,Organic Search
+2026-01-31,ORD-00033,100,Germany,Desktop,Returning,Organic Search
+2026-02-01,ORD-00034,100,Germany,Desktop,Returning,Organic Search
+2026-02-07,ORD-00035,100,Germany,Desktop,Returning,Organic Search
+2026-01-01,ORD-00036,100,Germany,Desktop,Returning,Paid Search
+2026-01-08,ORD-00037,100,Germany,Desktop,Returning,Paid Search
+2026-01-15,ORD-00038,100,Germany,Desktop,Returning,Paid Search
+2026-01-22,ORD-00039,100,Germany,Desktop,Returning,Paid Search
+2026-01-31,ORD-00040,100,Germany,Desktop,Returning,Paid Search
+2026-02-01,ORD-00041,100,Germany,Desktop,Returning,Paid Search
+2026-02-07,ORD-00042,100,Germany,Desktop,Returning,Paid Search
+2026-01-01,ORD-00043,100,Germany,Desktop,New,Organic Search
+2026-01-08,ORD-00044,100,Germany,Desktop,New,Organic Search
+2026-01-15,ORD-00045,100,Germany,Desktop,New,Organic Search
+2026-01-22,ORD-00046,100,Germany,Desktop,New,Organic Search
+2026-01-31,ORD-00047,100,Germany,Desktop,New,Organic Search
+2026-02-01,ORD-00048,100,Germany,Desktop,New,Organic Search
+2026-02-07,ORD-00049,100,Germany,Desktop,New,Organic Search
+2026-01-01,ORD-00050,100,Germany,Desktop,New,Paid Search
+2026-01-08,ORD-00051,100,Germany,Desktop,New,Paid Search
+2026-01-15,ORD-00052,100,Germany,Desktop,New,Paid Search
+2026-01-22,ORD-00053,100,Germany,Desktop,New,Paid Search
+2026-01-31,ORD-00054,100,Germany,Desktop,New,Paid Search
+2026-02-01,ORD-00055,100,Germany,Desktop,New,Paid Search
+2026-02-07,ORD-00056,100,Germany,Desktop,New,Paid Search
+2026-01-01,ORD-00057,100,France,Mobile,Returning,Organic Search
+2026-01-08,ORD-00058,100,France,Mobile,Returning,Organic Search
+2026-01-15,ORD-00059,100,France,Mobile,Returning,Organic Search
+2026-01-22,ORD-00060,100,France,Mobile,Returning,Organic Search
+2026-01-31,ORD-00061,100,France,Mobile,Returning,Organic Search
+2026-02-01,ORD-00062,100,France,Mobile,Returning,Organic Search
+2026-02-07,ORD-00063,100,France,Mobile,Returning,Organic Search
+2026-01-01,ORD-00064,100,France,Mobile,Returning,Paid Search
+2026-01-08,ORD-00065,100,France,Mobile,Returning,Paid Search
+2026-01-15,ORD-00066,100,France,Mobile,Returning,Paid Search
+2026-01-22,ORD-00067,100,France,Mobile,Returning,Paid Search
+2026-01-31,ORD-00068,100,France,Mobile,Returning,Paid Search
+2026-02-01,ORD-00069,100,France,Mobile,Returning,Paid Search
+2026-02-07,ORD-00070,100,France,Mobile,Returning,Paid Search
+2026-01-01,ORD-00071,100,France,Mobile,New,Organic Search
+2026-01-08,ORD-00072,100,France,Mobile,New,Organic Search
+2026-01-15,ORD-00073,100,France,Mobile,New,Organic Search
+2026-01-22,ORD-00074,100,France,Mobile,New,Organic Search
+2026-01-31,ORD-00075,100,France,Mobile,New,Organic Search
+2026-02-01,ORD-00076,100,France,Mobile,New,Organic Search
+2026-02-07,ORD-00077,100,France,Mobile,New,Organic Search
+2026-01-01,ORD-00078,100,France,Mobile,New,Paid Search
+2026-01-08,ORD-00079,100,France,Mobile,New,Paid Search
+2026-01-15,ORD-00080,100,France,Mobile,New,Paid Search
+2026-01-22,ORD-00081,100,France,Mobile,New,Paid Search
+2026-01-31,ORD-00082,100,France,Mobile,New,Paid Search
+2026-02-01,ORD-00083,100,France,Mobile,New,Paid Search
+2026-02-07,ORD-00084,100,France,Mobile,New,Paid Search
+2026-01-01,ORD-00085,100,France,Desktop,Returning,Organic Search
+2026-01-08,ORD-00086,100,France,Desktop,Returning,Organic Search
+2026-01-15,ORD-00087,100,France,Desktop,Returning,Organic Search
+2026-01-22,ORD-00088,100,France,Desktop,Returning,Organic Search
+2026-01-31,ORD-00089,100,France,Desktop,Returning,Organic Search
+2026-02-01,ORD-00090,100,France,Desktop,Returning,Organic Search
+2026-02-07,ORD-00091,100,France,Desktop,Returning,Organic Search
+2026-01-01,ORD-00092,100,France,Desktop,Returning,Paid Search
+2026-01-08,ORD-00093,100,France,Desktop,Returning,Paid Search
+2026-01-15,ORD-00094,100,France,Desktop,Returning,Paid Search
+2026-01-22,ORD-00095,100,France,Desktop,Returning,Paid Search
+2026-01-31,ORD-00096,100,France,Desktop,Returning,Paid Search
+2026-02-01,ORD-00097,100,France,Desktop,Returning,Paid Search
+2026-02-07,ORD-00098,100,France,Desktop,Returning,Paid Search
+2026-01-01,ORD-00099,100,France,Desktop,New,Organic Search
+2026-01-08,ORD-00100,100,France,Desktop,New,Organic Search
+2026-01-15,ORD-00101,100,France,Desktop,New,Organic Search
+2026-01-22,ORD-00102,100,France,Desktop,New,Organic Search
+2026-01-31,ORD-00103,100,France,Desktop,New,Organic Search
+2026-02-01,ORD-00104,100,France,Desktop,New,Organic Search
+2026-02-07,ORD-00105,100,France,Desktop,New,Organic Search
+2026-01-01,ORD-00106,100,France,Desktop,New,Paid Search
+2026-01-08,ORD-00107,100,France,Desktop,New,Paid Search
+2026-01-15,ORD-00108,100,France,Desktop,New,Paid Search
+2026-01-22,ORD-00109,100,France,Desktop,New,Paid Search
+2026-01-31,ORD-00110,100,France,Desktop,New,Paid Search
+2026-02-01,ORD-00111,100,France,Desktop,New,Paid Search
+2026-02-07,ORD-00112,100,France,Desktop,New,Paid Search
+2026-01-01,ORD-00113,100,United Kingdom,Mobile,Returning,Organic Search
+2026-01-08,ORD-00114,100,United Kingdom,Mobile,Returning,Organic Search
+2026-01-15,ORD-00115,100,United Kingdom,Mobile,Returning,Organic Search
+2026-01-22,ORD-00116,100,United Kingdom,Mobile,Returning,Organic Search
+2026-01-31,ORD-00117,100,United Kingdom,Mobile,Returning,Organic Search
+2026-02-01,ORD-00118,100,United Kingdom,Mobile,Returning,Organic Search
+2026-02-07,ORD-00119,100,United Kingdom,Mobile,Returning,Organic Search
+2026-01-01,ORD-00120,100,United Kingdom,Mobile,Returning,Paid Search
+2026-01-08,ORD-00121,100,United Kingdom,Mobile,Returning,Paid Search
+2026-01-15,ORD-00122,100,United Kingdom,Mobile,Returning,Paid Search
+2026-01-22,ORD-00123,100,United Kingdom,Mobile,Returning,Paid Search
+2026-01-31,ORD-00124,100,United Kingdom,Mobile,Returning,Paid Search
+2026-02-01,ORD-00125,100,United Kingdom,Mobile,Returning,Paid Search
+2026-02-07,ORD-00126,100,United Kingdom,Mobile,Returning,Paid Search
+2026-01-01,ORD-00127,100,United Kingdom,Mobile,New,Organic Search
+2026-01-08,ORD-00128,100,United Kingdom,Mobile,New,Organic Search
+2026-01-15,ORD-00129,100,United Kingdom,Mobile,New,Organic Search
+2026-01-22,ORD-00130,100,United Kingdom,Mobile,New,Organic Search
+2026-01-31,ORD-00131,100,United Kingdom,Mobile,New,Organic Search
+2026-02-01,ORD-00132,100,United Kingdom,Mobile,New,Organic Search
+2026-02-07,ORD-00133,100,United Kingdom,Mobile,New,Organic Search
+2026-01-01,ORD-00134,100,United Kingdom,Mobile,New,Paid Search
+2026-01-08,ORD-00135,100,United Kingdom,Mobile,New,Paid Search
+2026-01-15,ORD-00136,100,United Kingdom,Mobile,New,Paid Search
+2026-01-22,ORD-00137,100,United Kingdom,Mobile,New,Paid Search
+2026-01-31,ORD-00138,100,United Kingdom,Mobile,New,Paid Search
+2026-02-01,ORD-00139,100,United Kingdom,Mobile,New,Paid Search
+2026-02-07,ORD-00140,100,United Kingdom,Mobile,New,Paid Search
+2026-01-01,ORD-00141,100,United Kingdom,Desktop,Returning,Organic Search
+2026-01-08,ORD-00142,100,United Kingdom,Desktop,Returning,Organic Search
+2026-01-15,ORD-00143,100,United Kingdom,Desktop,Returning,Organic Search
+2026-01-22,ORD-00144,100,United Kingdom,Desktop,Returning,Organic Search
+2026-01-31,ORD-00145,100,United Kingdom,Desktop,Returning,Organic Search
+2026-02-01,ORD-00146,100,United Kingdom,Desktop,Returning,Organic Search
+2026-02-07,ORD-00147,100,United Kingdom,Desktop,Returning,Organic Search
+2026-01-01,ORD-00148,100,United Kingdom,Desktop,Returning,Paid Search
+2026-01-08,ORD-00149,100,United Kingdom,Desktop,Returning,Paid Search
+2026-01-15,ORD-00150,100,United Kingdom,Desktop,Returning,Paid Search
+2026-01-22,ORD-00151,100,United Kingdom,Desktop,Returning,Paid Search
+2026-01-31,ORD-00152,100,United Kingdom,Desktop,Returning,Paid Search
+2026-02-01,ORD-00153,100,United Kingdom,Desktop,Returning,Paid Search
+2026-02-07,ORD-00154,100,United Kingdom,Desktop,Returning,Paid Search
+2026-01-01,ORD-00155,100,United Kingdom,Desktop,New,Organic Search
+2026-01-08,ORD-00156,100,United Kingdom,Desktop,New,Organic Search
+2026-01-15,ORD-00157,100,United Kingdom,Desktop,New,Organic Search
+2026-01-22,ORD-00158,100,United Kingdom,Desktop,New,Organic Search
+2026-01-31,ORD-00159,100,United Kingdom,Desktop,New,Organic Search
+2026-02-01,ORD-00160,100,United Kingdom,Desktop,New,Organic Search
+2026-02-07,ORD-00161,100,United Kingdom,Desktop,New,Organic Search
+2026-01-01,ORD-00162,100,United Kingdom,Desktop,New,Paid Search
+2026-01-08,ORD-00163,100,United Kingdom,Desktop,New,Paid Search
+2026-01-15,ORD-00164,100,United Kingdom,Desktop,New,Paid Search
+2026-01-22,ORD-00165,100,United Kingdom,Desktop,New,Paid Search
+2026-01-31,ORD-00166,100,United Kingdom,Desktop,New,Paid Search
+2026-02-01,ORD-00167,100,United Kingdom,Desktop,New,Paid Search
+2026-02-07,ORD-00168,100,United Kingdom,Desktop,New,Paid Search
+2026-01-01,ORD-00169,100,United States,Mobile,Returning,Organic Search
+2026-01-08,ORD-00170,100,United States,Mobile,Returning,Organic Search
+2026-01-15,ORD-00171,100,United States,Mobile,Returning,Organic Search
+2026-01-22,ORD-00172,100,United States,Mobile,Returning,Organic Search
+2026-01-31,ORD-00173,100,United States,Mobile,Returning,Organic Search
+2026-02-01,ORD-00174,100,United States,Mobile,Returning,Organic Search
+2026-02-07,ORD-00175,100,United States,Mobile,Returning,Organic Search
+2026-01-01,ORD-00176,100,United States,Mobile,Returning,Paid Search
+2026-01-08,ORD-00177,100,United States,Mobile,Returning,Paid Search
+2026-01-15,ORD-00178,100,United States,Mobile,Returning,Paid Search
+2026-01-22,ORD-00179,100,United States,Mobile,Returning,Paid Search
+2026-01-31,ORD-00180,100,United States,Mobile,Returning,Paid Search
+2026-02-01,ORD-00181,100,United States,Mobile,Returning,Paid Search
+2026-02-07,ORD-00182,100,United States,Mobile,Returning,Paid Search
+2026-01-01,ORD-00183,100,United States,Mobile,New,Organic Search
+2026-01-08,ORD-00184,100,United States,Mobile,New,Organic Search
+2026-01-15,ORD-00185,100,United States,Mobile,New,Organic Search
+2026-01-22,ORD-00186,100,United States,Mobile,New,Organic Search
+2026-01-31,ORD-00187,100,United States,Mobile,New,Organic Search
+2026-02-01,ORD-00188,100,United States,Mobile,New,Organic Search
+2026-02-07,ORD-00189,100,United States,Mobile,New,Organic Search
+2026-01-01,ORD-00190,100,United States,Mobile,New,Paid Search
+2026-01-08,ORD-00191,100,United States,Mobile,New,Paid Search
+2026-01-15,ORD-00192,100,United States,Mobile,New,Paid Search
+2026-01-22,ORD-00193,100,United States,Mobile,New,Paid Search
+2026-01-31,ORD-00194,100,United States,Mobile,New,Paid Search
+2026-02-01,ORD-00195,100,United States,Mobile,New,Paid Search
+2026-02-07,ORD-00196,100,United States,Mobile,New,Paid Search
+2026-01-01,ORD-00197,100,United States,Desktop,Returning,Organic Search
+2026-01-08,ORD-00198,100,United States,Desktop,Returning,Organic Search
+2026-01-15,ORD-00199,100,United States,Desktop,Returning,Organic Search
+2026-01-22,ORD-00200,100,United States,Desktop,Returning,Organic Search
+2026-01-31,ORD-00201,100,United States,Desktop,Returning,Organic Search
+2026-02-01,ORD-00202,100,United States,Desktop,Returning,Organic Search
+2026-02-07,ORD-00203,100,United States,Desktop,Returning,Organic Search
+2026-01-01,ORD-00204,100,United States,Desktop,Returning,Paid Search
+2026-01-08,ORD-00205,100,United States,Desktop,Returning,Paid Search
+2026-01-15,ORD-00206,100,United States,Desktop,Returning,Paid Search
+2026-01-22,ORD-00207,100,United States,Desktop,Returning,Paid Search
+2026-01-31,ORD-00208,100,United States,Desktop,Returning,Paid Search
+2026-02-01,ORD-00209,100,United States,Desktop,Returning,Paid Search
+2026-02-07,ORD-00210,100,United States,Desktop,Returning,Paid Search
+2026-01-01,ORD-00211,100,United States,Desktop,New,Organic Search
+2026-01-08,ORD-00212,100,United States,Desktop,New,Organic Search
+2026-01-15,ORD-00213,100,United States,Desktop,New,Organic Search
+2026-01-22,ORD-00214,100,United States,Desktop,New,Organic Search
+2026-01-31,ORD-00215,100,United States,Desktop,New,Organic Search
+2026-02-01,ORD-00216,100,United States,Desktop,New,Organic Search
+2026-02-07,ORD-00217,100,United States,Desktop,New,Organic Search
+2026-01-01,ORD-00218,100,United States,Desktop,New,Paid Search
+2026-01-08,ORD-00219,100,United States,Desktop,New,Paid Search
+2026-01-15,ORD-00220,100,United States,Desktop,New,Paid Search
+2026-01-22,ORD-00221,100,United States,Desktop,New,Paid Search
+2026-01-31,ORD-00222,100,United States,Desktop,New,Paid Search
+2026-02-01,ORD-00223,100,United States,Desktop,New,Paid Search
+2026-02-07,ORD-00224,100,United States,Desktop,New,Paid Search

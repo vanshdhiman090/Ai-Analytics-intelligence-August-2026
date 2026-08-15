@@ -14,7 +14,7 @@ The user uploads a dataset, defines the KPI and two periods, and approves candid
 
 Planning and next-step selection may use an LLM, but every proposal is constrained and validated. Invalid, unsafe, or unavailable provider output uses a deterministic fallback. Verification and the conclusion compiler are separate from planning. The final API exposes the KPI movement, selected path, decomposition, data-quality status, caveats, readiness, robustness at the correct scope, next action, and safe evidence references—not prompts or mutable agent state.
 
-The proof is layered: 289 maintained backend tests passed locally, 16 Playwright browser tests cover the public experience, both suites are gated in GitHub Actions, five controlled real-world robustness scenarios pass through the public RCA V1 runtime, and a real browser-to-engine revenue investigation has been verified. Those benchmarks demonstrate controlled behavior, not universal production accuracy.
+The proof is layered: 289 maintained backend tests passed locally, 19 Playwright browser tests cover the public experience, both suites are gated in GitHub Actions, five controlled real-world robustness scenarios pass through the public RCA V1 runtime, and a real browser-to-engine revenue investigation has been verified. Those benchmarks demonstrate controlled behavior, not universal production accuracy.
 
 ## Architecture explanation
 

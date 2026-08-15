@@ -234,7 +234,8 @@ a { color: var(--teal); }
 .path-depth { z-index: 1; display: grid; min-height: 38px; place-items: center; border: 1px solid var(--teal); border-radius: 999px; background: var(--canvas); color: var(--teal); font: 700 9px var(--font-mono); text-transform: uppercase; }
 .path-main p { margin-bottom: 4px; color: var(--muted); font-size: 10px; text-transform: uppercase; }
 .path-main h3 { margin-bottom: 4px; font-size: 20px; }
-.path-main small { color: var(--muted); }
+.path-main strong, .path-main small { display: block; }
+.path-main small { margin-top: 4px; color: var(--muted); }
 .path-metrics, .leader-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin: 0; }
 .path-metrics div, .leader-metrics div { padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-subtle-strong); }
 .path-metrics dd, .leader-metrics dd, .decomposition-grid dd, .evidence-card dd { margin: 6px 0 0; font-weight: 700; }

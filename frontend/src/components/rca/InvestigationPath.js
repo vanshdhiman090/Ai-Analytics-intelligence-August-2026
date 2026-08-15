@@ -27,7 +27,7 @@ export default function InvestigationPath({ steps, unit }) {
       <ol className="investigation-path">
         <li className="path-node global-node">
           <span className="path-depth">Start</span>
-          <div><strong>Global KPI movement</strong><small>All supplied records in the requested periods</small></div>
+          <div className="path-main"><strong>Global KPI movement</strong><small>All supplied records in the requested periods</small></div>
         </li>
         {steps.map((step) => (
           <li className="path-node" key={`${step.depth}-${step.dimension}-${step.segment}`}>

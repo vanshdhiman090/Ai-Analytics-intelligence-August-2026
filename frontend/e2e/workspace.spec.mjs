@@ -211,6 +211,9 @@ test("single-dataset RCA flow submits the exact public request and renders signe
   await expect(pathNodes.nth(1)).toContainText("Germany");
   await expect(pathNodes.nth(2)).toContainText("Mobile");
   await expect(pathNodes.nth(3)).toContainText("Returning");
+  const globalPathDescription = page.locator(".global-node .path-main small");
+  await expect(globalPathDescription).toHaveText("All supplied records in the requested periods");
+  expect(await globalPathDescription.evaluate((element) => getComputedStyle(element).display)).toBe("block");
   await expect(page.getByRole("heading", { name: "Leading tested contributor", exact: true })).toBeVisible();
   await expect(page.locator("label.dimension-option", { hasText: "Constant Field" })).toHaveCount(0);
   await expect(page.getByText("+111.8%", { exact: true }).first()).toBeVisible();

@@ -29,12 +29,12 @@ Calculations run in deterministic Python over typed contracts. The language mode
 
 ## Engineering proof
 
-Verified at checkpoint `44baf43`:
+Phase 5C validation started from baseline `4040493`:
 
 | Evidence | What it establishes |
 | --- | --- |
 | **289 maintained backend tests passed locally; 1 legitimate skip** | Contracts, deterministic calculations, API mapping, failure handling, retention, readiness, and regression behavior are exercised. |
-| **16 Playwright browser tests** | The workspace preserves signed arithmetic, uncertainty, failure recovery, accessibility, responsiveness, and non-causal language. |
+| **19 Playwright browser tests** | The workspace preserves signed arithmetic, uncertainty, failure recovery, accessibility, responsiveness, and non-causal language. |
 | **Backend and frontend GitHub Actions gates** | Pull requests and `main` pushes must pass Python tests, a production Next.js build, and Chromium Playwright tests. |
 | **5/5 controlled real-world robustness scenarios** | The public RCA V1 runtime handled a clear driver, competing explanations, a data-quality abstention, no material driver, and a non-revenue operations case. This is bounded benchmark coverage—not a production-accuracy claim. |
 | **Real browser → API → RCA engine smoke test** | The deterministic revenue fixture completed through dataset upload, profiling, the public V1 API, governed investigation services, and the real frontend result view. |

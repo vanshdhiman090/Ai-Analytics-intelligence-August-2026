@@ -164,7 +164,7 @@ LangGraph workflow controller
 
 ### Root-cause capability boundary
 
-The language model may propose the approved analysis plan and evidence-linked narrative. It cannot calculate the RCA result. The RootCauseAgent maps an approved additive `segment_change` operation to `RCASemanticDefinition`; `app/services/root_cause.py` then calculates the incident movement, signed driver contributions, explained residual, evidence strength, and hypothesis status from typed inputs. A causal conclusion requires high-strength causal evidence plus completed falsification checks. Otherwise the strongest permitted conclusion is a mathematical driver, or an explicit abstention.
+The language model may propose an allowed next test, but it cannot calculate the RCA result. The public RCA V1 path maps the validated API request directly into the governed investigation service; `app/services/root_cause.py` calculates incident movement, signed contributions, residual movement, evidence strength, and hypothesis status from typed inputs. RCA V1 never publishes a causal conclusion: the strongest permitted public conclusion is a robust descriptive explanation or leading tested contributor, otherwise it returns a bounded abstention or inconclusive result. The broader `RootCauseAgent` adapter remains available for the legacy orchestrated workflow, but it is not the primary `POST /v1/rca/investigations` execution path.
 
 The Revenue V0 layer in `app/domain/revenue_semantics.py` uses exact physical-field aliases and publishes only measurable driver-tree branches. It never fuzzy-matches business fields. The current generic executor cannot yet enforce all Revenue filters and distinct-count identities, so those capabilities remain declared gaps rather than simulated calculations.
 

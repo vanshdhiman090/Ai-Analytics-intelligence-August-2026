@@ -20,7 +20,7 @@ An evidence-governed analytics agent that investigates business KPI movements th
 </div>
 
 ## Product demo
-
+🚀 **[Try the Live Root Cause Investigation Agent](https://ai-root-cause-investigation-agent.vercel.app)**
 <!--
 DEMO GIF SLOT
 

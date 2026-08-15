@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test:e2e": "playwright test",
+    "test:e2e:recruiter-demo": "playwright test --config=playwright.recruiter-demo.config.mjs",
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {

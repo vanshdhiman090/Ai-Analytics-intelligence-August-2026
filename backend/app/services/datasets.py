@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shutil
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import UploadFile
+from sqlalchemy.orm import Session
 
-from app.services.tabular import load_dataframe
+from app.models.schema import Dataset
+from app.services.tabular import json_value, load_dataframe, profile_dataset
 
 
 ALLOWED_EXTENSIONS = {".csv", ".xlsx"}
@@ -23,6 +26,14 @@ class DatasetUploadError(ValueError):
 
 class DatasetTooLargeError(DatasetUploadError):
     """Raised when an upload crosses the server-owned resource boundary."""
+
+
+class DatasetProcessingError(RuntimeError):
+    """Raised when a stored dataset cannot be profiled safely."""
+
+
+class DatasetRegistrationError(RuntimeError):
+    """Raised when a prepared dataset cannot be registered."""
 
 
 def _display_size_limit(max_bytes: int) -> str:
@@ -107,3 +118,81 @@ async def store_upload(file: UploadFile, data_dir: Path, max_bytes: int) -> Stor
         size_bytes=size,
         sha256=digest.hexdigest(),
     )
+
+
+def store_server_fixture(source: Path, data_dir: Path, max_bytes: int) -> StoredDataset:
+    """Copy one server-selected fixture into the governed upload lifecycle."""
+    source = source.resolve(strict=True)
+    original_filename = safe_filename(source.name)
+    extension = source.suffix.lower()
+    if extension not in ALLOWED_EXTENSIONS:
+        raise DatasetUploadError("The maintained demo dataset has an unsupported format.")
+    size = source.stat().st_size
+    if size == 0:
+        raise DatasetUploadError("The maintained demo dataset is empty.")
+    if size > max_bytes:
+        raise DatasetTooLargeError(
+            f"The maintained demo dataset exceeds the {_display_size_limit(max_bytes)} limit."
+        )
+
+    upload_dir = data_dir / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    destination = upload_dir / f"{uuid.uuid4().hex}{extension}"
+    try:
+        with source.open("rb") as input_file, destination.open("xb") as output_file:
+            shutil.copyfileobj(input_file, output_file, length=CHUNK_SIZE)
+        validate_tabular_file(destination)
+        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+
+    return StoredDataset(
+        path=destination,
+        original_filename=original_filename,
+        content_type=(
+            "text/csv"
+            if extension == ".csv"
+            else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+        size_bytes=size,
+        sha256=digest,
+    )
+
+
+def register_stored_dataset(stored: StoredDataset, db: Session) -> dict:
+    """Profile and register a governed file, returning the existing public contract."""
+    try:
+        profile = profile_dataset(stored.path)
+        frame = load_dataframe(stored.path)
+        preview = [
+            {str(column): json_value(value) for column, value in row.items()}
+            for row in frame.head(8).to_dict(orient="records")
+        ]
+    except Exception as exc:
+        raise DatasetProcessingError("The dataset could not be processed.") from exc
+
+    try:
+        dataset = Dataset(
+            file_path=str(stored.path),
+            original_filename=stored.original_filename,
+            content_type=stored.content_type,
+            size_bytes=stored.size_bytes,
+            sha256=stored.sha256,
+            schema_profile=profile,
+            row_count=profile["row_count"],
+        )
+        db.add(dataset)
+        db.commit()
+        db.refresh(dataset)
+    except Exception as exc:
+        db.rollback()
+        raise DatasetRegistrationError("The dataset could not be registered.") from exc
+
+    return {
+        "dataset_id": str(dataset.id),
+        "filename": dataset.original_filename,
+        "size_bytes": dataset.size_bytes,
+        "profile": profile,
+        "preview": preview,
+    }

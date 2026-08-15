@@ -14,7 +14,14 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.schema import Dataset
 from app.services.data_model import DataModelError, ModelSource, inspect_data_model
-from app.services.datasets import DatasetTooLargeError, DatasetUploadError, store_upload
+from app.services.datasets import (
+    DatasetProcessingError,
+    DatasetRegistrationError,
+    DatasetTooLargeError,
+    DatasetUploadError,
+    register_stored_dataset,
+    store_upload,
+)
 from app.services.tabular import json_value, load_dataframe, profile_dataset
 from pydantic import BaseModel, Field
 from app.services.sql_sources import SqlSourceError, snapshot_sql_query
@@ -63,6 +70,14 @@ def model_sources(datasets: list[Dataset]) -> list[ModelSource]:
 
 @router.post("/datasets", status_code=status.HTTP_201_CREATED)
 async def upload_dataset(request: Request, file: UploadFile = File(...)):
+    if settings.RECRUITER_DEMO_MODE:
+        await file.close()
+        return _upload_error(
+            request,
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="external_dataset_ingestion_disabled",
+            message="External dataset upload is not available in recruiter demo mode.",
+        )
     try:
         stored = await store_upload(file, settings.DATA_DIR, settings.MAX_UPLOAD_BYTES)
     except DatasetTooLargeError as exc:
@@ -80,66 +95,39 @@ async def upload_dataset(request: Request, file: UploadFile = File(...)):
             message=str(exc),
         )
 
-    try:
-        profile = profile_dataset(stored.path)
-        frame = load_dataframe(stored.path)
-        preview = [
-            {str(column): json_value(value) for column, value in row.items()}
-            for row in frame.head(8).to_dict(orient="records")
-        ]
-    except Exception:
-        Path(stored.path).unlink(missing_ok=True)
-        logger.exception(
-            "Dataset profiling failed request_id=%s",
-            getattr(request.state, "request_id", "unknown"),
-        )
-        return _upload_error(
-            request,
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            code="dataset_processing_failed",
-            message="The dataset could not be processed.",
-        )
     db = SessionLocal()
     try:
-        dataset = Dataset(
-            file_path=str(stored.path),
-            original_filename=stored.original_filename,
-            content_type=stored.content_type,
-            size_bytes=stored.size_bytes,
-            sha256=stored.sha256,
-            schema_profile=profile,
-            row_count=profile["row_count"],
-        )
-        db.add(dataset)
-        db.commit()
-        db.refresh(dataset)
-        return {
-            "dataset_id": str(dataset.id),
-            "filename": dataset.original_filename,
-            "size_bytes": dataset.size_bytes,
-            "profile": profile,
-            "preview": preview,
-        }
-    except Exception:
-        db.rollback()
+        return register_stored_dataset(stored, db)
+    except (DatasetProcessingError, DatasetRegistrationError) as exc:
         Path(stored.path).unlink(missing_ok=True)
         logger.exception(
-            "Dataset registration failed request_id=%s",
+            "Dataset preparation failed request_id=%s",
             getattr(request.state, "request_id", "unknown"),
         )
         return _upload_error(
             request,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            code="dataset_registration_failed",
-            message="The dataset could not be registered.",
+            code=(
+                "dataset_processing_failed"
+                if isinstance(exc, DatasetProcessingError)
+                else "dataset_registration_failed"
+            ),
+            message=str(exc),
         )
     finally:
         db.close()
 
 
 @router.post("/datasets/sql", status_code=status.HTTP_201_CREATED)
-def import_sql_dataset(req: SqlSourceRequest):
+def import_sql_dataset(req: SqlSourceRequest, request: Request):
     """Create a local CSV snapshot from a one-time, read-only SQL query."""
+    if settings.RECRUITER_DEMO_MODE:
+        return _upload_error(
+            request,
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="external_dataset_ingestion_disabled",
+            message="External dataset ingestion is not available in recruiter demo mode.",
+        )
     try:
         path, digest = snapshot_sql_query(req.connection_url, req.query, settings.DATA_DIR)
         profile = profile_dataset(path)

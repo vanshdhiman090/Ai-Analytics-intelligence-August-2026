@@ -19,6 +19,7 @@ def _valid_settings(monkeypatch, tmp_path, *, mode="test"):
         "DB_POOL_SIZE": 1,
         "DATA_DIR": tmp_path / "data",
         "MAX_UPLOAD_BYTES": 1024,
+        "RECRUITER_DEMO_MODE": False,
         "API_KEYS": set(),
         "FILE_TTL_DAYS": 1,
         "MEMORY_SCOPE": "test-workspace",
@@ -32,6 +33,13 @@ def _valid_settings(monkeypatch, tmp_path, *, mode="test"):
 def test_valid_test_configuration_allows_provider_fallback_without_api_key(monkeypatch, tmp_path):
     _valid_settings(monkeypatch, tmp_path)
     settings.validate()
+
+
+def test_recruiter_demo_mode_is_a_typed_boolean(monkeypatch, tmp_path):
+    _valid_settings(monkeypatch, tmp_path)
+    monkeypatch.setattr(settings, "RECRUITER_DEMO_MODE", "true")
+    with pytest.raises(RuntimeError, match="RECRUITER_DEMO_MODE"):
+        settings.validate()
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,8 @@
 import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 
-const SERVER_URL = "http://127.0.0.1:3011";
+const PORT = process.env.PLAYWRIGHT_APP_PORT || "3011";
+const SERVER_URL = `http://127.0.0.1:${PORT}`;
 
 async function responds() {
   try {
@@ -35,9 +36,9 @@ export default async function globalSetup() {
   if (await responds()) return async () => {};
 
   const nextCli = path.resolve("node_modules", "next", "dist", "bin", "next");
-  const child = spawn(process.execPath, [nextCli, "dev", "-p", "3011", "-H", "127.0.0.1"], {
+  const child = spawn(process.execPath, [nextCli, "dev", "-p", PORT, "-H", "127.0.0.1"], {
     cwd: process.cwd(),
-    env: { ...process.env, NEXT_DIST_DIR: ".next-e2e" },
+    env: { ...process.env, NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || ".next-e2e" },
     stdio: "inherit",
     windowsHide: true,
   });

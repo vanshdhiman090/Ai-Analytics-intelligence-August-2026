@@ -64,6 +64,10 @@ export async function uploadDataset(file) {
   return request("/datasets", { method: "POST", body });
 }
 
+export async function loadHeroDemoDataset() {
+  return request("/v1/demo/datasets/hero", { method: "POST" });
+}
+
 export async function deleteDataset(datasetId) {
   if (!datasetId) return;
   await request(`/datasets/${datasetId}`, { method: "DELETE" });

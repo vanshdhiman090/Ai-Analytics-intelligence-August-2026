@@ -4,7 +4,7 @@ import { useEffect, useReducer, useRef } from "react";
 import AppShell from "@/components/shell/AppShell";
 import InvestigationResult from "@/components/rca/InvestigationResult";
 import InvestigationSetup from "@/components/rca/InvestigationSetup";
-import { ApiError, deleteDataset, runRcaInvestigation, uploadDataset } from "@/lib/api";
+import { ApiError, deleteDataset, loadHeroDemoDataset, runRcaInvestigation, uploadDataset } from "@/lib/api";
 import { boundedGoal, titleize } from "@/lib/rcaPresentation";
 
 const EMPTY_FORM = {
@@ -29,6 +29,8 @@ const INITIAL_STATE = {
   lastRequest: null,
   result: null,
 };
+
+const RECRUITER_DEMO_MODE = process.env.NEXT_PUBLIC_RECRUITER_DEMO_MODE === "true";
 
 function defaultForm(dataset) {
   const columns = Object.values(dataset?.profile?.columns || {});
@@ -190,6 +192,18 @@ export default function RcaWorkspace() {
     }
   }
 
+  async function handleLoadDemo() {
+    const previousDatasetId = state.dataset?.dataset_id;
+    dispatch({ type: "UPLOAD_START" });
+    try {
+      const dataset = await loadHeroDemoDataset();
+      dispatch({ type: "UPLOAD_SUCCESS", dataset });
+      if (previousDatasetId && previousDatasetId !== dataset.dataset_id) deleteDataset(previousDatasetId).catch(() => {});
+    } catch (error) {
+      dispatch({ type: "UPLOAD_ERROR", error, fieldErrors: state.dataset ? {} : { dataset: error.message } });
+    }
+  }
+
   async function handleRemoveDataset() {
     try {
       await deleteDataset(state.dataset?.dataset_id);
@@ -263,7 +277,9 @@ export default function RcaWorkspace() {
           fieldErrors={state.fieldErrors}
           isUploading={state.isUploading}
           isInvestigating={state.isInvestigating}
+          recruiterDemoMode={RECRUITER_DEMO_MODE}
           onUpload={handleUpload}
+          onLoadDemo={handleLoadDemo}
           onRemoveDataset={handleRemoveDataset}
           onChange={(field, value) => dispatch({ type: "SET_FIELD", field, value })}
           onToggleDimension={(dimension) => dispatch({ type: "TOGGLE_DIMENSION", dimension })}

@@ -45,6 +45,14 @@ def _request_payload(req: ConnectorRequest) -> dict:
     return req.model_dump(exclude_none=True)
 
 
+def _require_connector_access() -> None:
+    if settings.RECRUITER_DEMO_MODE:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "External data connectors are not available in recruiter demo mode.",
+        )
+
+
 def _read(req: ConnectorRequest):
     try:
         return default_registry().read(req.connector, _request_payload(req))
@@ -71,18 +79,21 @@ def _response(result, preview_limit: int = 20) -> dict:
 @router.get("/catalog")
 def connector_catalog():
     """Return the data-only source catalogue and setup readiness."""
+    _require_connector_access()
     return {"read_only": True, "sources": default_registry().catalog()}
 
 
 @router.post("/preview")
 def preview_connector(req: ConnectorRequest):
     """Read a bounded source preview without creating a dataset."""
+    _require_connector_access()
     return _response(_read(req))
 
 
 @router.post("/snapshot", status_code=status.HTTP_201_CREATED)
 def snapshot_connector(req: ConnectorRequest):
     """Read a bounded source result and save it as a normal analysis dataset."""
+    _require_connector_access()
     result = _read(req)
     frame = pd.DataFrame(list(result.rows), columns=list(result.columns))
     if frame.empty:

@@ -165,6 +165,9 @@ a { color: var(--teal); }
 .drop-zone.disabled { opacity: 0.65; }
 .drop-zone strong { margin: 12px 0 5px; font-size: 16px; }
 .drop-zone span:last-child { color: var(--muted); font-size: 12px; }
+.demo-entry { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; min-height: 150px; margin-top: 22px; padding: clamp(20px, 3vw, 30px); border: 1px solid var(--border-strong); border-radius: 13px; background: var(--surface-drop); }
+.demo-entry p { margin-top: 6px; color: var(--muted); line-height: 1.55; }
+.demo-mark { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid var(--teal); border-radius: 14px; background: var(--teal-soft); color: var(--teal); font-family: var(--font-mono); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; }
 .drop-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: var(--teal-soft); color: var(--teal); font-size: 24px; }
 .profile-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin: 20px 0 0; }
 .profile-facts div, .review-grid div { padding: 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-subtle); }
@@ -302,6 +305,8 @@ a { color: var(--teal); }
   .leader-card > .evidence-links { justify-self: start; }
 }
 @media (max-width: 680px) {
+  .demo-entry { grid-template-columns: 1fr; }
+  .demo-entry .button { width: 100%; }
   .workspace-page { width: min(100% - 24px, 1180px); padding-top: 18px; }
   .app-header { grid-template-columns: auto minmax(0, 1fr); }
   .app-header-actions { grid-column: 1 / -1; justify-content: flex-start; }

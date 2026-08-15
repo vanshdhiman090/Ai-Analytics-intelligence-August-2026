@@ -46,7 +46,7 @@ function PeriodInput({ prefix, label, grain, value, onChange, errors }) {
   );
 }
 
-function DatasetSummary({ dataset, onReplace, onRemove, disabled }) {
+function DatasetSummary({ dataset, onReplace, onRemove, disabled, recruiterDemoMode }) {
   const profile = dataset.profile || {};
   const dateColumns = columnsFrom(dataset).filter((column) => column.date_semantics?.min_date);
   return (
@@ -57,24 +57,28 @@ function DatasetSummary({ dataset, onReplace, onRemove, disabled }) {
           <h2 id="dataset-summary-title">{dataset.filename}</h2>
         </div>
         <div className="button-row">
-          <label
-            className="button secondary compact"
-            htmlFor="replace-dataset"
-            onDragOver={(event) => { event.preventDefault(); if (!disabled) event.dataTransfer.dropEffect = "copy"; }}
-            onDrop={(event) => { event.preventDefault(); if (!disabled && event.dataTransfer.files?.[0]) onReplace(event.dataTransfer.files[0]); }}
-          >Replace dataset</label>
-          <input
-            className="visually-hidden-input"
-            id="replace-dataset"
-            type="file"
-            accept=".csv,.xlsx"
-            disabled={disabled}
-            onChange={(event) => {
-              const selected = event.target.files?.[0];
-              event.target.value = "";
-              if (selected) onReplace(selected);
-            }}
-          />
+          {!recruiterDemoMode && (
+            <>
+              <label
+                className="button secondary compact"
+                htmlFor="replace-dataset"
+                onDragOver={(event) => { event.preventDefault(); if (!disabled) event.dataTransfer.dropEffect = "copy"; }}
+                onDrop={(event) => { event.preventDefault(); if (!disabled && event.dataTransfer.files?.[0]) onReplace(event.dataTransfer.files[0]); }}
+              >Replace dataset</label>
+              <input
+                className="visually-hidden-input"
+                id="replace-dataset"
+                type="file"
+                accept=".csv,.xlsx"
+                disabled={disabled}
+                onChange={(event) => {
+                  const selected = event.target.files?.[0];
+                  event.target.value = "";
+                  if (selected) onReplace(selected);
+                }}
+              />
+            </>
+          )}
           <button className="button ghost compact danger-action" type="button" disabled={disabled} onClick={onRemove}>Remove</button>
         </div>
       </div>
@@ -140,6 +144,27 @@ function UploadPanel({ onUpload, uploading, errors }) {
           if (selected) onUpload(selected);
         }}
       />
+      <FieldError id="dataset" errors={errors} />
+    </section>
+  );
+}
+
+function RecruiterDemoPanel({ onLoadDemo, loading, errors }) {
+  return (
+    <section className="setup-card upload-panel" aria-labelledby="demo-title">
+      <p className="eyebrow">Step 1 · Validated evidence</p>
+      <h2 id="demo-title">Run the maintained revenue incident</h2>
+      <p className="section-copy">Explore the real governed RCA workflow using the maintained ecommerce benchmark fixture.</p>
+      <div className="demo-entry">
+        <span className="demo-mark" aria-hidden="true">RCA</span>
+        <div>
+          <strong>Recruiter-safe demonstration</strong>
+          <p>No external data upload is enabled in this public recruiter demo. The server will create a fresh opaque reference to the validated fixture.</p>
+        </div>
+        <button className="button primary" type="button" onClick={onLoadDemo} disabled={loading}>
+          {loading ? "Loading validated demo…" : "Try validated demo"}
+        </button>
+      </div>
       <FieldError id="dataset" errors={errors} />
     </section>
   );
@@ -286,7 +311,7 @@ function ReviewPanel({ dataset, form, onBack, onRun, investigating }) {
 }
 
 export default function InvestigationSetup(props) {
-  const { phase, dataset, form, fieldErrors, isUploading } = props;
+  const { phase, dataset, form, fieldErrors, isUploading, recruiterDemoMode } = props;
   return (
     <div className="setup-shell">
       <nav className="setup-progress" aria-label="Investigation setup progress">
@@ -296,9 +321,13 @@ export default function InvestigationSetup(props) {
         })}
       </nav>
       <div className="setup-content">
-        {!dataset ? <UploadPanel onUpload={props.onUpload} uploading={isUploading} errors={fieldErrors} /> : (
+        {!dataset ? (
+          recruiterDemoMode
+            ? <RecruiterDemoPanel onLoadDemo={props.onLoadDemo} loading={isUploading} errors={fieldErrors} />
+            : <UploadPanel onUpload={props.onUpload} uploading={isUploading} errors={fieldErrors} />
+        ) : (
           <>
-            <DatasetSummary dataset={dataset} onReplace={props.onUpload} onRemove={props.onRemoveDataset} disabled={isUploading || props.isInvestigating} />
+            <DatasetSummary dataset={dataset} onReplace={props.onUpload} onRemove={props.onRemoveDataset} disabled={isUploading || props.isInvestigating} recruiterDemoMode={recruiterDemoMode} />
             {phase === "review" ? <ReviewPanel dataset={dataset} form={form} onBack={props.onBackToConfigure} onRun={props.onRun} investigating={props.isInvestigating} /> : <ConfigurationForm dataset={dataset} form={form} errors={fieldErrors} onChange={props.onChange} onToggleDimension={props.onToggleDimension} onReview={props.onReview} />}
           </>
         )}

@@ -12,6 +12,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _environment_bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise RuntimeError(f"{name} must be a boolean value.")
+
+
 class Settings:
     DEPLOYMENT_MODE: str = os.environ.get("DEPLOYMENT_MODE", "development").strip().lower()
     DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
@@ -25,6 +37,9 @@ class Settings:
     DB_POOL_SIZE: int = int(os.environ.get("DB_POOL_SIZE", "5"))
     DATA_DIR: Path = Path(os.environ.get("DATA_DIR", "data")).resolve()
     MAX_UPLOAD_BYTES: int = int(os.environ.get("MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
+    # Bounded public portfolio mode. The backend owns this boundary; the
+    # browser flag only controls presentation and cannot enable ingestion.
+    RECRUITER_DEMO_MODE: bool = _environment_bool("RECRUITER_DEMO_MODE")
     # Comma-separated API keys for simple bearer auth. Empty = auth disabled (local dev).
     API_KEYS: set[str] = {
         k.strip()
@@ -61,6 +76,8 @@ class Settings:
             raise RuntimeError(f"Missing required env vars: {', '.join(missing)}. Check your .env file.")
         if self.DEPLOYMENT_MODE not in {"development", "test", "controlled_pilot"}:
             raise RuntimeError("DEPLOYMENT_MODE must be 'development', 'test', or 'controlled_pilot'.")
+        if not isinstance(self.RECRUITER_DEMO_MODE, bool):
+            raise RuntimeError("RECRUITER_DEMO_MODE must be a boolean value.")
         if self.LLM_PROVIDER != "gemini":
             raise RuntimeError("LLM_PROVIDER must be 'gemini'.")
         if self.CHECKPOINT_BACKEND not in {"postgres", "memory"}:

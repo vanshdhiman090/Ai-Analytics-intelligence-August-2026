@@ -22,7 +22,7 @@ from app.services import progress as progress_bus
 from app.services.dataset_lifecycle import cleanup_dataset_records, expired_dataset_records
 from app.services.run_manager import run_manager
 
-from app.api.routers import agents, health, evaluations, datasets, sessions, artifacts, connectors, rca
+from app.api.routers import agents, health, evaluations, datasets, sessions, artifacts, connectors, demo, rca
 
 logger = logging.getLogger(__name__)
 
@@ -147,4 +147,5 @@ app.include_router(sessions.router)
 app.include_router(artifacts.router)
 app.include_router(agents.router)
 app.include_router(connectors.router)
+app.include_router(demo.router)
 app.include_router(rca.router)

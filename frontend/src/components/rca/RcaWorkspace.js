@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useRef } from "react";
+import AppShell from "@/components/shell/AppShell";
 import InvestigationResult from "@/components/rca/InvestigationResult";
 import InvestigationSetup from "@/components/rca/InvestigationSetup";
 import { ApiError, deleteDataset, runRcaInvestigation, uploadDataset } from "@/lib/api";
@@ -249,17 +250,7 @@ export default function RcaWorkspace() {
   }
 
   return (
-    <main className="workspace-page">
-      <header className="workspace-header">
-        <div className="brand-mark" aria-hidden="true">R</div>
-        <div>
-          <p className="eyebrow">AI Root Cause Investigation Agent</p>
-          <h1>Investigation workspace</h1>
-          <p>Trace a KPI movement through tested contributions, evidence, and explicit uncertainty.</p>
-        </div>
-        <span className="version-badge">V1 · Additive KPI</span>
-      </header>
-
+    <AppShell>
       <div ref={errorRef}><ErrorBanner error={state.apiError} /></div>
 
       {state.phase === "investigating" ? <LoadingPanel /> : state.phase === "result" && state.result ? (
@@ -281,6 +272,6 @@ export default function RcaWorkspace() {
           onRun={handleRun}
         />
       )}
-    </main>
+    </AppShell>
   );
 }

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 
@@ -416,4 +417,70 @@ test("primary configuration controls support keyboard activation", async ({ page
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("rca-result")).toBeVisible();
   expect(pageErrors).toEqual([]);
+});
+
+test("professional shell defaults to dark with only RCA shown as active", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByText("AI Analytics Intelligence", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Root Cause Investigation" })).toBeVisible();
+  await expect(page.getByText("Active capability", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Switch to light theme" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Forecasting|Anomaly Detection|Scenario Analysis/ })).toHaveCount(0);
+});
+
+test("theme switch persists after reload and essential RCA content remains visible in light mode", async ({ page }) => {
+  await mockApi(page);
+  await uploadAndConfigure(page);
+  await runInvestigation(page);
+  await page.getByRole("button", { name: "Switch to light theme" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("heading", { name: "Revenue" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Leading tested contributor" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Data quality" })).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("button", { name: "Switch to dark theme" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose one structured dataset" })).toBeVisible();
+});
+
+test("result utilities copy a bounded summary and download only public response fields", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (value) => { window.__copiedInvestigationSummary = value; } },
+    });
+  });
+  await mockApi(page);
+  await uploadAndConfigure(page);
+  await runInvestigation(page);
+
+  await page.getByRole("button", { name: "Copy summary" }).click();
+  await expect(page.getByRole("status")).toHaveText("Investigation summary copied.");
+  const copied = await page.evaluate(() => window.__copiedInvestigationSummary);
+  expect(copied).toContain("Leading tested contributor:");
+  expect(copied).toContain("descriptive contribution evidence; not causal proof");
+  expect(copied).not.toContain("confirmed root cause");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download public JSON" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe(`rca-investigation-${INVESTIGATION_ID}.json`);
+  const downloadedPath = await download.path();
+  const payload = JSON.parse(await readFile(downloadedPath, "utf8"));
+  expect(Object.keys(payload).sort()).toEqual([
+    "api_version",
+    "conclusion",
+    "data_quality",
+    "investigation_id",
+    "investigation_path",
+    "kpi_movement",
+    "leading_contributor",
+    "selected_decomposition",
+    "supporting_evidence",
+  ]);
+  expect(JSON.stringify(payload)).not.toMatch(/prompt|filesystem|secret|internal_state/i);
 });

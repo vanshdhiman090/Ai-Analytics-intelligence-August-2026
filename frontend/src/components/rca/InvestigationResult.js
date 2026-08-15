@@ -1,5 +1,6 @@
 import InvestigationEvidence from "@/components/rca/InvestigationEvidence";
 import InvestigationPath from "@/components/rca/InvestigationPath";
+import ResultUtilities from "@/components/shared/ResultUtilities";
 import {
   CAVEAT_LABELS,
   CLAIM_LABELS,
@@ -157,7 +158,10 @@ export default function InvestigationResult({ result, onRevise, onNew }) {
     <div className="result-workspace" data-testid="rca-result">
       <div className="result-toolbar">
         <div><p className="eyebrow">Investigation {result.investigation_id}</p><span>API contract {result.api_version}</span></div>
-        <div className="button-row"><button className="button secondary" type="button" onClick={onRevise}>Revise inputs</button><button className="button primary" type="button" onClick={onNew}>New investigation</button></div>
+        <div className="result-toolbar-actions">
+          <ResultUtilities result={result} />
+          <div className="button-row"><button className="button secondary" type="button" onClick={onRevise}>Revise inputs</button><button className="button primary" type="button" onClick={onNew}>New investigation</button></div>
+        </div>
       </div>
       <KpiIncident movement={result.kpi_movement} />
       <InvestigationPath steps={result.investigation_path} unit={result.kpi_movement.unit} />

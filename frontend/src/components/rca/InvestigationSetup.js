@@ -75,7 +75,7 @@ function DatasetSummary({ dataset, onReplace, onRemove, disabled }) {
               if (selected) onReplace(selected);
             }}
           />
-          <button className="button ghost compact" type="button" disabled={disabled} onClick={onRemove}>Remove</button>
+          <button className="button ghost compact danger-action" type="button" disabled={disabled} onClick={onRemove}>Remove</button>
         </div>
       </div>
       <dl className="profile-facts">

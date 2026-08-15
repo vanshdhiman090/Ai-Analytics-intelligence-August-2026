@@ -1,4 +1,30 @@
-# AI Analytics Workspace — Target Architecture
+# Architecture
+
+## Current portfolio product: RCA V1
+
+The primary product path is the **AI Root Cause Investigation Agent**. It accepts one validated structured dataset, an explicit additive KPI and period comparison, and approved candidate dimensions. It returns a scoped, evidence-backed descriptive conclusion without exposing internal agent state.
+
+```text
+Next.js RCA workspace
+  → POST /datasets → validation and deterministic profiling
+  → POST /v1/rca/investigations
+  → governed dataset resolver and typed request mapping
+  → governed RCA V1 runtime
+       ├─ hypothesis planning and bounded next-test control
+       ├─ deterministic KPI and signed-contribution calculations
+       ├─ scoped data-quality gates
+       ├─ falsification and verification
+       └─ deterministic conclusion compiler
+  → sanitized public result and evidence references
+```
+
+Provider output can prioritize an allowed next test but cannot calculate results, execute code, change policy, or bypass validation. Rejected or unavailable provider output uses deterministic fallback. The API owns the maximum depth, materiality, reconciliation, coverage, verification, and conclusion rules.
+
+PostgreSQL supports metadata and the broader durable workflow. Local governed files support the controlled single-workspace operating envelope. Backend tests, the frontend production build, and Chromium Playwright semantics are gated by GitHub Actions.
+
+The manager/specialist hierarchy and Ask → Prepare → Process → Analyze → Share → Act workflow below are broader platform background. They should not be interpreted as the primary execution path for `POST /v1/rca/investigations`.
+
+## Broader analytics platform background
 
 ## Product promise
 

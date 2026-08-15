@@ -2,13 +2,9 @@
 
 ## Current evidence-based assessment
 
-The repository now has a dataset-aware analytical core. Process, Analyze,
-Share, and Act no longer reference Nike columns or a fixed discount story. A
-typed planner selects allow-listed calculations, the executor produces evidence,
-and findings and recommendations must cite valid IDs. The remaining gap is
-production hardening rather than removal of dataset-specific logic.
+The current portfolio product is the AI Root Cause Investigation Agent. RCA V1 runs through a stable FastAPI contract and a focused Next.js investigation workspace. Its governed production path maintains typed investigation state, calculates signed contributions deterministically, handles offsets and reconciliation, applies scoped data-quality gates, tests competing explanations, verifies evidence, and compiles non-causal conclusions.
 
-Root Cause Analytics V0 is now integrated under the existing Analysis Manager: governed Revenue semantics, typed contribution and reconciliation, hypothesis/falsification contracts, explicit causal-language boundaries, and a dedicated 10-incident release evaluation. The next proof milestone is to run the production RootCauseAgent—not reference answers—against representative synthetic and real datasets, measure the same scorecard, and close the highest-error capability gap.
+The production path has completed a real full-stack browser smoke test and five controlled robustness scenarios: a clear driver, competing explanations, data-quality abstention, no material driver, and a non-revenue operations case. These fixtures provide bounded regression evidence, not a universal accuracy claim. Immediate work should prioritize broader evaluated evidence and public-production boundaries rather than expanding into a generic analytics assistant.
 
 ## Phase 0 — Correct the product boundary — Complete
 

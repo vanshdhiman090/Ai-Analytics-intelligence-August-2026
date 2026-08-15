@@ -8,7 +8,7 @@ $devVenvPython = "C:\dev\ai-analytics-venv\Scripts\python.exe"
 $fallbackPython = Join-Path $env:LOCALAPPDATA "Temp\ai-analytics-agent-venv\Scripts\python.exe"
 # Check dev venv first (avoids OneDrive sync corruption of .venv\Scripts)
 if (Test-Path $devVenvPython) { $python = $devVenvPython } elseif (Test-Path $localPython) { $python = $localPython } elseif (Test-Path $fallbackPython) { $python = $fallbackPython } else { throw "Python environment not found. Run .\Setup-Agent.ps1 first." }
-if (-not (Test-Path (Join-Path $backend ".env"))) { throw "backend\.env is missing. Copy .env.example and add your Neon and Gemini values." }
+if (-not (Test-Path (Join-Path $backend ".env"))) { throw "backend\.env is missing. Copy .env.example and add your database URL. Gemini is optional for deterministic RCA fallback." }
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 function Get-ListenerPid([int]$Port) {
     $connection = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -37,6 +37,6 @@ for ($attempt = 1; $attempt -le 30; $attempt++) {
     try { $health = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health/ready" -TimeoutSec 2; if ($health.status -eq "ready") { $ready = $true; break } } catch { Start-Sleep -Milliseconds 800 }
 }
 if (-not $ready) { throw "Backend did not become ready. Check runtime-logs\backend-error.log." }
-Write-Host "AI Analytics Agent is ready:" -ForegroundColor Green
+Write-Host "AI Root Cause Investigation Agent is ready:" -ForegroundColor Green
 Write-Host "http://127.0.0.1:3010"
 Write-Host "To stop it later, run .\Stop-Agent.ps1"

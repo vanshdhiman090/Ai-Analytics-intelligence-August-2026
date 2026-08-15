@@ -9,4 +9,4 @@ foreach ($port in @(3010, 8000)) {
         }
     }
 }
-Write-Host "AI Analytics Agent stopped." -ForegroundColor Green
+Write-Host "AI Root Cause Investigation Agent stopped." -ForegroundColor Green

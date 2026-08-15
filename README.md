@@ -1,150 +1,198 @@
-# AI Analytics Workspace
+# AI Root Cause Investigation Agent
 
-A human-guided analytics agent that follows the Google Data Analytics lifecycle:
+Given a business KPI movement and structured data, this agent systematically investigates why the metric changed, ranks evidence-backed contributors, tests competing explanations, communicates uncertainty, and recommends the next analytical action.
 
-**Ask → Prepare → Process → Analyze → Share → Act**
+It is built for analysts, product teams, and operations teams facing a movement such as **Revenue down 8.8%** and needing a reproducible investigation—not another dashboard tile or an unsupported chatbot answer.
 
-It accepts one or multiple CSV/XLSX sources and a business question, discovers and validates table relationships, pauses when human approval or external context is required, executes only allow-listed analytical operations, and produces an evidence-linked decision package.
+## The problem
 
-## What it produces
+Dashboards are good at showing **what** changed. They rarely maintain an investigation state, test several explanations, reconcile signed contributions, or know when the evidence is unsafe.
 
-- One complete case study report covering Ask, Prepare, Process, Analyze, Share, and Act, with findings, recommendations, caveats, source context, and embedded charts.
-- An editable native PowerPoint presentation with stakeholder-ready narrative, charts, recommendations, next steps, and source notes.
-- One Project Files ZIP containing the cleaned dataset, charts, a reproducible notebook and Python code, the approved analysis plan, validated evidence, and raw-data references.
-- An editable report workspace with version history and downloadable Word or PDF exports.
-- A durable run record that can recover after browser or backend restarts.
+A one-shot language-model answer has the opposite problem: it may sound analytical without proving that its numbers tie back to the dataset.
 
-## Architecture
+This product separates analytical judgment from calculation:
 
 ```text
-Next.js workspace → FastAPI API → bounded run workers → LangGraph workflow
-                           ↘ PostgreSQL sessions + durable checkpoints
-                           ↘ validated local datasets + report artifacts
-                           ↘ read-only Google Intelligence Connector Pack
+KPI movement
+  → validate the data and period comparison
+  → plan bounded dimension hypotheses
+  → run deterministic contribution tests
+  → select and recursively investigate supported segments
+  → test competing explanations and falsification checks
+  → verify evidence and compile a bounded conclusion
+  → communicate caveats and the next analytical action
 ```
 
-Key design rules:
+Calculations run in deterministic Python over typed contracts. The language model may assist bounded planning and next-test prioritization, but it cannot calculate the result, execute generated Python or SQL, alter server-owned thresholds, or bypass validation. Invalid or unavailable provider output falls back to deterministic control.
 
-- Ground or ask: never invent provenance, licensing, intent, or stakeholder context.
-- Controlled computation: the model proposes typed operations; model-written Python is never executed.
-- Traceability: evidence IDs support findings, and finding IDs support recommendations.
-- Durable approvals: PostgreSQL checkpoints resume the correct stage after a restart.
-- Pre-checkpoint recovery: the sanitized original run envelope is persisted, so Retry can safely restart a run that failed before its first LangGraph checkpoint.
-- Coverage gate: plans cannot silently omit dataset columns explicitly named in the question.
-- Multi-file model gate: shared keys are profiled for uniqueness, coverage, cardinality, orphan records, and row-multiplication risk before any join is approved.
-- Many-to-many relationships are blocked; approved one-to-many grain expansion and unmatched rows remain visible in the Process-phase audit.
-- Release readiness combines the deterministic analytical suite with source-aware Playwright browser journeys; any frontend source change makes the browser gate stale until `npm run test:e2e` passes again.
-- Honest uncertainty: missing data, invalid dates, sample limits, and correlation caveats remain visible.
-- Clean phase boundaries: Act creates actions; a neutral post-phase Package step validates and assembles documents without becoming a seventh analytical phase.
+**A leading tested contributor is descriptive evidence, not a confirmed causal root cause.** Unsafe data produces an abstention rather than a confident story.
 
-## Managed specialist workforce
+## Engineering proof
 
-The LangGraph run controls durable stage order while `AnalyticsManager` acts as chief orchestrator. Five domain managers supervise 24 bounded professional specialists: Discovery, Data, Analysis, Delivery, and an independent Quality Manager. The chief manager creates typed assignments, exposes only allow-listed state fields to each specialist, validates required outputs, retries only classified transient side-effect-free work, and records sanitized supervision events. Every specialist has a declared mission, responsibilities, inputs, outputs, allowed actions, quality gates, and escalation conditions in `backend/app/agent/hierarchy.py`.
+Verified at checkpoint `44baf43`:
 
-Broad stage executors are wrapped by focused roles. For example, Analyze is separated into planning, deterministic statistical execution, trend/segmentation review, root-cause diagnostics, and evidence review. The independent quality team reviews calculation integrity, citations, causal language, and final publication readiness without modifying the producer's evidence or findings.
+| Evidence | What it establishes |
+| --- | --- |
+| **289 maintained backend tests passed locally; 1 legitimate skip** | Contracts, deterministic calculations, API mapping, failure handling, retention, readiness, and regression behavior are exercised. |
+| **16 Playwright browser tests** | The workspace preserves signed arithmetic, uncertainty, failure recovery, accessibility, responsiveness, and non-causal language. |
+| **Backend and frontend GitHub Actions gates** | Pull requests and `main` pushes must pass Python tests, a production Next.js build, and Chromium Playwright tests. |
+| **5/5 controlled real-world robustness scenarios** | The public RCA V1 runtime handled a clear driver, competing explanations, a data-quality abstention, no material driver, and a non-revenue operations case. This is bounded benchmark coverage—not a production-accuracy claim. |
+| **Real browser → API → RCA engine smoke test** | The deterministic revenue fixture completed through dataset upload, profiling, the public V1 API, governed investigation services, and the real frontend result view. |
+| **Operational hardening** | Request IDs, sanitized failures, deterministic provider fallback, readiness checks, and bounded dataset retention support local and controlled-pilot operation. |
 
-### Root Cause Analytics V0
+The separate ten-incident RCA scorer includes answer keys and release thresholds. Its bundled reference predictions calibrate the scorer; they are deliberately **not** presented as production-agent accuracy.
 
-Root-cause mode now turns an approved additive `segment_change` calculation into a typed investigation report. The deterministic engine verifies the incident and baseline, checks data health, ranks signed driver contributions, reconciles attributed and residual movement within the tested decomposition, evaluates competing hypotheses and falsification checks, grades evidence strength, and abstains when the evidence is unsafe. Mathematical contribution is never presented as causal proof. Completed RCA projects expose a dedicated **Investigation** view alongside the normal evidence and audit views.
+## Hero investigation
 
-The opt-in Milestone 6 conclusion compiler converts completed investigation state into a deterministic, non-causal `InvestigationConclusion`. It preserves the selected path from the global KPI to the deepest defensible segment, retains the exact filter path, validates every test/evidence/verification reference, and records downstream blocks without erasing valid upstream findings. `readiness_status` means readiness to make a stronger descriptive explanatory claim; competing explanations, inconclusive results, and data-quality abstentions remain valid final outputs even when that status is not ready. The compiler performs no data loading, calculations, model calls, controller decisions, or verification work.
+The included [`demo-data/rca-revenue-incident.csv`](demo-data/rca-revenue-incident.csv) contains a controlled ecommerce incident:
 
-### RCA API V1
+| KPI | January 2026 | February 2026 | Movement |
+| --- | ---: | ---: | ---: |
+| Revenue | €16,000 | €14,600 | **-€1,400 (-8.75%)** |
 
-`POST /v1/rca/investigations` exposes the completed RCA engine through a stable public contract using an existing `dataset_id`. It is synchronous and creates a fresh investigation UUID for every execution. Public results contain KPI movement, exact source and target scopes, the selected path, target-scoped decomposition arithmetic, explanatory readiness, target-applicable robustness, controlled caveats and next actions, sanitized data-quality codes, and response-local evidence references. Internal agent state, prompts, provider output, file paths, raw rows, and internal evidence identifiers are never returned.
+The verified investigation path is:
 
-Phase 1 product policy supports at most 12 approved candidate dimensions and fixes investigation depth at 3. Clients cannot override depth, evidence thresholds, coverage/null policies, reconciliation tolerances, verification thresholds, or enabled reasoning stages. Canonical period labels match the RCA engine: `YYYY-MM-DD` for day, `YYYY-MM-DD` for the engine's weekly start date, `YYYY-MM` for month, `YYYYQn` for quarter, and `YYYY` for year. This remains a single-workspace controlled-pilot API because uploaded datasets do not yet have tenant ownership boundaries.
+```text
+Global revenue -€1,400
+  └─ Germany -€1,200 (85.71% of total movement)
+       └─ Mobile -€1,100 (91.67% of Germany movement)
+            └─ Returning -€1,400 (127.27% of Mobile movement)
+```
 
-Revenue is the first governed business semantic contract: `SUM(net_revenue)` at order grain with explicit completed-order, refund, reporting-currency, timezone, and comparison policies. Exact field bindings are required. Missing or ambiguous required fields—and missing currency/timezone policy—produce an auditable abstention rather than a guessed metric.
+The deepest contribution legitimately exceeds 100% because New customers offset the decline by **+€300**. At the global level, France provides a **+€200** offset. The agent preserves those signed offsets and reconciles each tested partition instead of clamping percentages or ranking absolute percentages alone.
 
-Release evaluation now combines the original 27 deterministic analytics cases with 10 answer-keyed RCA incidents covering detection, incident classification, driver/segment identification, contribution accuracy, hypothesis status, abstention, reconciliation, causal safety, and evidence traceability. The included RCA reference predictions calibrate the scorer; they are not represented as a production-agent accuracy claim.
+Result: **Returning customers within Germany → Mobile are the leading tested contributor**. Readiness is `ready_with_caveats`; robustness is not verified at the selected deepest target; the depth-three policy boundary is explicit. This is a mathematical contribution path, not causal proof.
 
-The agent also keeps a governed experience memory in PostgreSQL. Failures start as inactive candidates. A candidate becomes an active lesson only when a later retry succeeds, and only active lessons for the same workspace, specialist, and stage are recalled. Recalled lessons are advisory: current user instructions, typed contracts, deterministic validation, and quality gates always take priority. Set `MEMORY_SCOPE` to a unique stable workspace/tenant identifier before deployment.
+See the complete recruiter-facing walkthrough in [Hero demo](docs/HERO_DEMO.md) and the answer key in [fixture ground truth](demo-data/rca-revenue-incident-ground-truth.md).
 
-### Read-only Google Intelligence Connector Pack
+## Current RCA architecture
 
-The Data Manager can now take bounded, read-only snapshots from Google Drive, Google Sheets, GA4, Search Console, and BigQuery. Each adapter returns the same preview and lineage shape, applies a source-specific row limit, and converts an approved read into a normal dataset for the existing Prepare/Process/Analyze workflow. Google credentials are process configuration only. `GOOGLE_ACCESS_TOKEN` supports a quick test; durable local access uses `GOOGLE_REFRESH_TOKEN`, `GOOGLE_OAUTH_CLIENT_ID`, and `GOOGLE_OAUTH_CLIENT_SECRET`, with renewed access tokens held only in memory. Credentials are never stored in the database, prompts, memory lessons, or dataset rows. BigQuery accepts only one `SELECT`/`WITH` query and all five adapters are exposed through `GET /connectors/catalog`, `POST /connectors/preview`, and `POST /connectors/snapshot`.
+```text
+Next.js investigation workspace
+             ↓
+POST /datasets → validation + deterministic profiling
+             ↓
+POST /v1/rca/investigations
+             ↓
+FastAPI public contract + governed dataset loader
+             ↓
+Governed RCA V1 runtime
+  ├─ typed investigation state and hypotheses
+  ├─ deterministic KPI and signed-contribution math
+  ├─ bounded planner/controller with deterministic fallback
+  ├─ scoped data-quality gates
+  ├─ falsification and verification
+  └─ deterministic conclusion compiler
+             ↓
+Evidence-backed public response → frontend presentation
 
-## Run on Windows
+PostgreSQL: metadata and durable broader-workflow state
+GitHub Actions: backend tests + frontend build + Chromium gate
+Local governed storage: bounded upload lifecycle and retention
+```
 
-For the current configured project, double-click `Start-Agent.cmd`, then open:
+The public RCA endpoint is synchronous and returns a fresh investigation ID. Clients provide a dataset ID, explicit additive KPI, baseline and comparison periods, and approved candidate dimensions. The server owns depth, materiality, data-quality, reconciliation, verification, and conclusion policies.
 
-**http://127.0.0.1:3010**
+Historical general-analytics workflow components remain in the repository, but they are not presented as the primary RCA V1 request path. See [Architecture](docs/ARCHITECTURE.md) for the distinction.
 
-Double-click `Stop-Agent.cmd` when finished.
+## Why this is an agent
 
-For a fresh computer:
+- **Not a dashboard:** it does more than render a KPI. It selects bounded next tests and carries evidence forward through an investigation path.
+- **Not a chatbot:** claims must be supported by typed evidence, deterministic arithmetic, reconciliation, and explicit quality gates.
+- **Not a one-shot prompt:** it maintains structured investigation state, updates hypothesis status, recursively scopes into supported segments, tests alternatives, and can abstain.
+- **Auditable:** the public result links the KPI movement, selected scopes, contribution arithmetic, quality issues, conclusion, and evidence references.
+- **Self-critical by design:** planning is separate from deterministic execution and verification; weak, competing, or unsafe evidence limits the conclusion.
 
-1. Double-click `Setup-Agent.cmd` once.
+## Key engineering decisions
+
+| Decision | Why it matters |
+| --- | --- |
+| Deterministic math over LLM arithmetic | KPI values and contribution shares remain reproducible and testable. |
+| Strict typed contracts | Planner, controller, executor, conclusion compiler, and API cannot silently change data shapes. |
+| Server-owned RCA policy | Clients cannot tune thresholds until a preferred answer appears. |
+| Data-quality abstention | Missing periods, unsafe coverage, or invalid metrics stop interpretation before a false business conclusion. |
+| Scoped evidence and quality | A downstream limitation does not erase valid upstream evidence, and upstream verification is not attached to a deeper target. |
+| Signed reconciliation | Downward pressure, positive offsets, net movement, and residual within each tested decomposition remain mathematically distinct. |
+| Bounded recursive depth | The agent can drill down without creating an unbounded search or pretending it tested every possible explanation. |
+| Validated provider fallback | Provider failure cannot remove deterministic analytical correctness. |
+| Non-causal conclusion compiler | Mathematical contribution is never silently upgraded into causal certainty. |
+| Request IDs and sanitized errors | Failures are diagnosable without returning prompts, stack traces, credentials, paths, or raw rows. |
+| Controlled dataset lifecycle | Standalone uploads and finished-session datasets are removed under a tested TTL policy. |
+| Backend and browser CI | Numerical semantics and user-facing epistemic language are both release-gated. |
+
+## Quickstart on Windows
+
+Requirements: Python, Node.js/npm, and a PostgreSQL database. Gemini is optional for RCA because deterministic fallback is supported.
+
+1. Run `Setup-Agent.cmd` once.
 2. Copy `backend/.env.example` to `backend/.env`.
-3. Add the Neon database URL and Gemini API key.
-4. Apply the SQL files in `backend/migrations` in numeric order.
+3. Set `DATABASE_URL`; retain the documented local defaults unless you understand the controlled-pilot settings. Add `GEMINI_API_KEY` only if provider-assisted planning is desired.
+4. Apply the SQL files in `backend/migrations` in numeric order to a fresh database.
 5. Run `Start-Agent.cmd`.
+6. Open [http://127.0.0.1:3010](http://127.0.0.1:3010).
+7. Upload `demo-data/rca-revenue-incident.csv` and enter:
 
-Runtime logs are written to `runtime-logs/`.
+| Field | Value |
+| --- | --- |
+| KPI name | `Revenue` |
+| Metric column | `revenue` |
+| Time column / grain | `date` / `month` |
+| Unit | `EUR` |
+| Baseline / comparison | `2026-01` / `2026-02` |
+| Candidate dimensions | `country`, `device`, `customer_type`, `acquisition_channel` |
+
+Expected path: **Germany → Mobile → Returning**, with a -€1,400 incident, +€300 target-level offset, zero target-decomposition residual, and explicit non-causal caveats.
+
+Run `Stop-Agent.cmd` when finished. Runtime logs are written to `runtime-logs/`. The step-by-step browser check is in [REAL_RCA_SMOKE_TEST.md](demo-data/REAL_RCA_SMOKE_TEST.md).
 
 ## Verification
 
-Backend tests:
+Backend maintained suite:
 
 ```powershell
 cd backend
 $env:CHECKPOINT_BACKEND="memory"
+$env:DATABASE_URL="sqlite+pysqlite:///:memory:"
 python -m pytest -q
 ```
 
-`backend/pytest.ini` explicitly limits maintained automated collection to `backend/tests`. The five historical files at the backend rootâ€”`test_analyze_node.py`, `test_full_pipeline.py`, `test_orchestrator.py`, `test_prepare_node.py`, and `test_process_node.py`â€”are manual/integration artifacts that depend on historical or external state. They are preserved, but they are not part of the maintained automated suite and are not described as passing tests. CI runs the same `cd backend` / `python -m pytest -q` maintained-suite command. Repository-root `pytest -q` is not claimed as a supported equivalent.
-
-Deterministic analytics evaluations:
-
-```powershell
-cd backend
-.\.venv\Scripts\python.exe -m app.evals.runner
-```
-
-This versioned release gate checks exact calculations, contribution reconciliation, period comparisons, null and date handling, method-question alignment, unsafe column/type rejection, uncertainty language, non-causal correlation boundaries, outlier suitability, and deterministic repeatability. It writes:
-
-- `backend/evals/reports/latest.json` for automation and regression tracking.
-- `backend/evals/reports/latest.html` for human review.
-
-Every critical case and every evaluation layer must pass. The same gate is available inside the workspace UI and through `POST /evaluations/run`.
-
-Frontend production build:
+Frontend release gate:
 
 ```powershell
 cd frontend
+npm ci
 npm run build
-```
-
-Frontend semantic browser gate:
-
-```powershell
-cd frontend
 npm run test:e2e
 ```
 
-## API lifecycle
+Robustness benchmark fixtures and answer keys are documented in [`demo-data/benchmarks/`](demo-data/benchmarks/). CI runs the maintained backend suite plus the frontend production build and Chromium tests.
 
-- `POST /datasets` validates and uploads a dataset.
-- `POST /data-model/inspect` profiles up to ten uploaded sources and returns detected relationships plus a conservative proposed join model.
-- `POST /sessions` queues a new analysis and returns immediately.
-- `GET /sessions/{id}` returns progress, checkpoints, errors, and artifacts.
-- `POST /sessions/{id}/resume` answers a human checkpoint.
-- `POST /sessions/{id}/retry` safely continues from the durable checkpoint.
-- `GET /sessions` returns recent analyses.
-- `GET/PUT /artifacts/{id}/editor` loads and saves versioned document content.
-- `GET /artifacts/{id}/download.docx` creates an editable Word export from the latest saved revision.
-- `GET /artifacts/{id}/download.pdf` creates a print-ready PDF from the same saved revision.
-- `GET /health/live` and `GET /health/ready` support operational health checks.
-- `GET /evaluations/latest` returns the latest accuracy and regression result.
-- `POST /evaluations/run` reruns the deterministic release gate and refreshes its reports.
-- `GET /agent/hierarchy` describes every manager and specialist contract.
-- `GET /agent/memory` returns the current workspace's sanitized candidate and active lessons.
-- `GET /connectors/catalog` reports the five data-only, read-only Google sources and setup readiness.
-- `POST /connectors/preview` reads a bounded source preview without creating a dataset.
-- `POST /connectors/snapshot` creates a lineage-tagged dataset from an approved connector read.
-- `POST /v1/rca/investigations` runs a synchronous, governed V1 KPI investigation against one existing dataset.
+## Public RCA API boundary
 
-## Current readiness
+- `POST /datasets` validates and profiles a CSV/XLSX upload and returns an opaque dataset ID.
+- `POST /v1/rca/investigations` executes the governed synchronous investigation.
+- The public result includes KPI movement, selected path, leading contributor, target decomposition, readiness, target-applicable robustness, caveats, data-quality codes, next action, and response-local evidence references.
+- Internal prompts, provider output, mutable agent state, raw rows, filesystem paths, stack traces, and internal evidence identifiers are not exposed.
 
-This is strong for local portfolio work and controlled pilots. Public multi-user deployment still requires authentication/authorization, tenant isolation, encrypted object storage, a distributed job queue, monitoring, rate limits, backups, and formal privacy controls. See the [operational guide](docs/OPERATIONS.md) and [production readiness](docs/PRODUCTION_READINESS.md).
+The broader historical platform still includes session workflows, artifacts, evaluations, experience memory, and read-only Google connectors. Those capabilities are background—not the primary specialist product story.
+
+## Honest limitations
+
+This repository is appropriate for a local portfolio demo and a controlled single-workspace pilot. It is **not** a public multi-user production SaaS.
+
+- Additive `SUM` KPI investigations over structured CSV/XLSX data only
+- Synchronous RCA endpoint
+- Server-governed maximum depth of three
+- Local file storage and process-local active-dataset protection
+- No public user authentication, authorization, or tenant isolation
+- No distributed queue, execution, locking, or idempotency
+- No object storage, malware scanning, or enterprise secret manager
+- Browser-visible `NEXT_PUBLIC_API_KEY` is a pilot access gate, not a secret or public authentication mechanism
+- No causal inference claim; the engine identifies tested descriptive contributors
+- Controlled benchmarks establish regression coverage, not universal analytical accuracy
+
+See [Operational guide](docs/OPERATIONS.md), [Production readiness](docs/PRODUCTION_READINESS.md), and [Interview story](docs/INTERVIEW_STORY.md).
+
+## Broader platform background
+
+The repository began as a human-guided **Ask → Prepare → Process → Analyze → Share → Act** analytics workspace with LangGraph checkpoints, specialist roles, document packaging, governed memory, and Google data connectors. Those components remain available and documented, but the current portfolio product leads with the narrower, evaluated RCA investigation path.

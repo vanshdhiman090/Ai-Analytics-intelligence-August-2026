@@ -10,8 +10,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import UploadFile
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.api.auth import GuestPrincipal
+from app.core.config import settings
 from app.models.schema import Dataset
 from app.services.tabular import json_value, load_dataframe, profile_dataset
 
@@ -160,7 +163,22 @@ def store_server_fixture(source: Path, data_dir: Path, max_bytes: int) -> Stored
     )
 
 
-def register_stored_dataset(stored: StoredDataset, db: Session) -> dict:
+def owned_dataset_query(db: Session, guest: GuestPrincipal):
+    """Scope a Dataset query to rows this guest may see.
+
+    A NULL guest_owner_id (maintained recruiter-demo fixtures, or legacy
+    pre-ownership rows) is only visible while RECRUITER_DEMO_MODE is on —
+    outside demo mode a NULL owner is never treated as public.
+    """
+    condition = Dataset.guest_owner_id == guest.id
+    if settings.RECRUITER_DEMO_MODE:
+        condition = or_(condition, Dataset.guest_owner_id.is_(None))
+    return db.query(Dataset).filter(condition)
+
+
+def register_stored_dataset(
+    stored: StoredDataset, db: Session, guest_id: uuid.UUID | None = None
+) -> dict:
     """Profile and register a governed file, returning the existing public contract."""
     try:
         profile = profile_dataset(stored.path)
@@ -181,6 +199,7 @@ def register_stored_dataset(stored: StoredDataset, db: Session) -> dict:
             sha256=stored.sha256,
             schema_profile=profile,
             row_count=profile["row_count"],
+            guest_owner_id=guest_id,
         )
         db.add(dataset)
         db.commit()

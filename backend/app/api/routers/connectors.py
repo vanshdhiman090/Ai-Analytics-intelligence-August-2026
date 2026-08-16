@@ -6,10 +6,10 @@ import uuid
 from typing import Literal
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from app.api.auth import require_api_key
+from app.api.auth import GuestPrincipal, require_api_key, require_guest_principal
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.schema import Dataset
@@ -91,7 +91,11 @@ def preview_connector(req: ConnectorRequest):
 
 
 @router.post("/snapshot", status_code=status.HTTP_201_CREATED)
-def snapshot_connector(req: ConnectorRequest):
+def snapshot_connector(
+    req: ConnectorRequest,
+    request: Request,
+    guest: GuestPrincipal = Depends(require_guest_principal),
+):
     """Read a bounded source result and save it as a normal analysis dataset."""
     _require_connector_access()
     result = _read(req)
@@ -119,6 +123,7 @@ def snapshot_connector(req: ConnectorRequest):
             sha256=__import__("hashlib").sha256(path.read_bytes()).hexdigest(),
             schema_profile=profile,
             row_count=profile["row_count"],
+            guest_owner_id=guest.id,
         )
         db.add(dataset)
         db.commit()

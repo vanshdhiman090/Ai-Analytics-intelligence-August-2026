@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 
-from app.api.auth import require_api_key
+from app.api.auth import GuestPrincipal, require_api_key, require_guest_principal
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.schema import Dataset
@@ -19,6 +19,7 @@ from app.services.datasets import (
     DatasetRegistrationError,
     DatasetTooLargeError,
     DatasetUploadError,
+    owned_dataset_query,
     register_stored_dataset,
     store_upload,
 )
@@ -69,7 +70,11 @@ def model_sources(datasets: list[Dataset]) -> list[ModelSource]:
 
 
 @router.post("/datasets", status_code=status.HTTP_201_CREATED)
-async def upload_dataset(request: Request, file: UploadFile = File(...)):
+async def upload_dataset(
+    request: Request,
+    file: UploadFile = File(...),
+    guest: GuestPrincipal = Depends(require_guest_principal),
+):
     if settings.RECRUITER_DEMO_MODE:
         await file.close()
         return _upload_error(
@@ -97,7 +102,7 @@ async def upload_dataset(request: Request, file: UploadFile = File(...)):
 
     db = SessionLocal()
     try:
-        return register_stored_dataset(stored, db)
+        return register_stored_dataset(stored, db, guest_id=guest.id)
     except (DatasetProcessingError, DatasetRegistrationError) as exc:
         Path(stored.path).unlink(missing_ok=True)
         logger.exception(
@@ -119,7 +124,11 @@ async def upload_dataset(request: Request, file: UploadFile = File(...)):
 
 
 @router.post("/datasets/sql", status_code=status.HTTP_201_CREATED)
-def import_sql_dataset(req: SqlSourceRequest, request: Request):
+def import_sql_dataset(
+    req: SqlSourceRequest,
+    request: Request,
+    guest: GuestPrincipal = Depends(require_guest_principal),
+):
     """Create a local CSV snapshot from a one-time, read-only SQL query."""
     if settings.RECRUITER_DEMO_MODE:
         return _upload_error(
@@ -137,7 +146,7 @@ def import_sql_dataset(req: SqlSourceRequest, request: Request):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     db = SessionLocal()
     try:
-        dataset = Dataset(file_path=str(path), original_filename=req.label, content_type="application/sql-result", size_bytes=path.stat().st_size, sha256=digest, schema_profile=profile, row_count=profile["row_count"])
+        dataset = Dataset(file_path=str(path), original_filename=req.label, content_type="application/sql-result", size_bytes=path.stat().st_size, sha256=digest, schema_profile=profile, row_count=profile["row_count"], guest_owner_id=guest.id)
         db.add(dataset); db.commit(); db.refresh(dataset)
         return {"dataset_id": str(dataset.id), "filename": dataset.original_filename, "size_bytes": dataset.size_bytes, "profile": profile, "preview": preview}
     except Exception:
@@ -148,11 +157,15 @@ def import_sql_dataset(req: SqlSourceRequest, request: Request):
 
 
 @router.delete("/datasets/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_dataset(dataset_id: uuid.UUID):
+def delete_dataset(
+    dataset_id: uuid.UUID,
+    request: Request,
+    guest: GuestPrincipal = Depends(require_guest_principal),
+):
     """Remove an unassigned dataset and its uploaded file."""
     db = SessionLocal()
     try:
-        dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        dataset = owned_dataset_query(db, guest).filter(Dataset.id == dataset_id).first()
         if dataset is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Dataset not found")
         if dataset.session_id is not None:
@@ -169,10 +182,14 @@ def delete_dataset(dataset_id: uuid.UUID):
 
 
 @router.post("/data-model/inspect")
-def inspect_uploaded_data_model(req: DataModelRequest):
+def inspect_uploaded_data_model(
+    req: DataModelRequest,
+    request: Request,
+    guest: GuestPrincipal = Depends(require_guest_principal),
+):
     db = SessionLocal()
     try:
-        rows = db.query(Dataset).filter(Dataset.id.in_(req.dataset_ids)).all()
+        rows = owned_dataset_query(db, guest).filter(Dataset.id.in_(req.dataset_ids)).all()
         by_id = {item.id: item for item in rows}
         if len(by_id) != len(set(req.dataset_ids)):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "One or more datasets were not found")

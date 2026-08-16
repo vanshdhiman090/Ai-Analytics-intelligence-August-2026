@@ -15,6 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 
+from app.api.auth import apply_guest_cookie
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.schema import Session as SessionModel
@@ -120,6 +121,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-Request-ID", "X-API-Key"],
     expose_headers=["X-Request-ID"],
@@ -131,6 +133,7 @@ async def request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
     request.state.request_id = request_id
     response = await call_next(request)
+    apply_guest_cookie(response, request)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"

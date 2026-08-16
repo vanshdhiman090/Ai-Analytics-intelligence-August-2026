@@ -14,13 +14,14 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 
-from app.api.auth import require_api_key
+from app.api.auth import GuestPrincipal, require_api_key, require_guest_principal
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.schema import AgentAction, Artifact, Checkpoint, Dataset, DocumentRevision
 from app.models.schema import Session as SessionModel
 from app.services import progress as progress_bus
 from app.services.data_model import DataModelError, ModelSource, materialize_data_model
+from app.services.datasets import owned_dataset_query
 from app.services.run_manager import run_manager
 
 router = APIRouter(tags=["sessions"], dependencies=[Depends(require_api_key)])
@@ -159,7 +160,11 @@ def session_payload(db, session: SessionModel, include_detail: bool = True) -> d
 # ── Routes ──────────────────────────────────────────────────────────────────
 
 @router.post("/sessions", status_code=status.HTTP_202_ACCEPTED)
-def create_session(req: CreateSessionRequest):
+def create_session(
+    req: CreateSessionRequest,
+    request: Request,
+    guest: GuestPrincipal = Depends(require_guest_principal),
+):
     db = SessionLocal()
     try:
         requested_ids = req.dataset_ids or ([req.dataset_id] if req.dataset_id else [])
@@ -170,7 +175,7 @@ def create_session(req: CreateSessionRequest):
                 status.HTTP_400_BAD_REQUEST, "A dataset cannot be selected more than once"
             )
         rows = (
-            db.query(Dataset)
+            owned_dataset_query(db, guest)
             .filter(Dataset.id.in_(requested_ids))
             .with_for_update()
             .all()

@@ -28,6 +28,7 @@ class Dataset(Base):
     __tablename__ = "datasets"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"))
+    guest_owner_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     file_path = Column(Text, nullable=False)
     original_filename = Column(Text)
     content_type = Column(Text)

@@ -20,6 +20,7 @@ def _valid_settings(monkeypatch, tmp_path, *, mode="test"):
         "DATA_DIR": tmp_path / "data",
         "MAX_UPLOAD_BYTES": 1024,
         "RECRUITER_DEMO_MODE": False,
+        "GUEST_IDENTITY_SECRET": "x" * 32,
         "API_KEYS": set(),
         "FILE_TTL_DAYS": 1,
         "MEMORY_SCOPE": "test-workspace",

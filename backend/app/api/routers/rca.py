@@ -175,4 +175,14 @@ def create_rca_investigation(
     with dataset_in_use(body.dataset_id):
         dataset = resolve_dataset(body.dataset_id)
         frame = load_governed_dataset(dataset, settings.DATA_DIR)
-        return execute_rca_request(frame, body)
+        response = execute_rca_request(frame, body)
+        logger.info(
+            "RCA investigation completed request_id=%s investigation_id=%s",
+            _request_id(request),
+            response.investigation_id,
+            extra={
+                "request_id": _request_id(request),
+                "investigation_id": response.investigation_id,
+            },
+        )
+        return response

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Callable
@@ -18,6 +19,7 @@ from app.domain.root_cause_contracts import (
 )
 from app.services.llm import generate_structured
 
+logger = logging.getLogger(__name__)
 
 _NUMERIC_CLAIM = re.compile(r"(?:\d|[%€$£¥])")
 _CAUSAL_OR_CERTAINTY = re.compile(
@@ -122,6 +124,17 @@ def choose_next_action(
     except Exception:
         proposal = None
         rejection = "provider_failure"
+        logger.warning(
+            "Controller decision fell back to deterministic mode investigation_id=%s decision_source=%s rejection=%s",
+            request.investigation_id,
+            "deterministic_fallback",
+            rejection,
+            extra={
+                "investigation_id": request.investigation_id,
+                "decision_source": "deterministic_fallback",
+                "rejection": rejection,
+            },
+        )
 
     if rejection is None and data_health_blocked:
         rejection = "data_health_blocked"

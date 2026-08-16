@@ -6,6 +6,7 @@ never produces findings, calculations, SQL, or causal assertions.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable, Iterable
 
@@ -20,6 +21,7 @@ from app.domain.root_cause_contracts import (
 )
 from app.services.llm import generate_structured
 
+logger = logging.getLogger(__name__)
 
 _NUMERIC_CLAIM = re.compile(r"(?:\d|[%€$£¥])")
 _CAUSAL_OR_CERTAINTY = re.compile(r"\b(cause[ds]?|causal|prove[ds]?|confirm(?:ed|s)?|certain(?:ly)?)\b", re.IGNORECASE)
@@ -112,6 +114,17 @@ def plan_hypotheses(
         valid = []
         fallback_reason = "provider_failure"
         planner_mode = "deterministic_fallback"
+        logger.warning(
+            "Hypothesis planning fell back to deterministic mode investigation_id=%s planner_mode=%s fallback_reason=%s",
+            request.investigation_id,
+            planner_mode,
+            fallback_reason,
+            extra={
+                "investigation_id": request.investigation_id,
+                "planner_mode": planner_mode,
+                "fallback_reason": fallback_reason,
+            },
+        )
 
     planned: list[PlannedHypothesis] = []
     included = {item.target_dimension for item in valid}

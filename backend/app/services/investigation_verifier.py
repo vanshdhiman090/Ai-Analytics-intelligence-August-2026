@@ -7,6 +7,7 @@ the target, performs every calculation, and assigns every robustness result.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import Callable
 
@@ -30,6 +31,7 @@ from app.domain.root_cause_contracts import (
 )
 from app.services.llm import generate_structured
 
+logger = logging.getLogger(__name__)
 
 DEFAULT_VERIFICATION_POLICY = VerificationPolicyV1()
 _CHALLENGE_ORDER: tuple[ChallengeType, ...] = (
@@ -247,6 +249,18 @@ def plan_challenges(
                 challenge_type="<provider>", rejection_reason="provider_failure"
             )
         )
+        for item in rejected:
+            logger.warning(
+                "Challenge planning fell back to deterministic mode investigation_id=%s fallback_reason=%s rejection_reason=%s",
+                request.investigation_id,
+                fallback_reason,
+                item.rejection_reason,
+                extra={
+                    "investigation_id": request.investigation_id,
+                    "fallback_reason": fallback_reason,
+                    "rejection_reason": item.rejection_reason,
+                },
+            )
 
     planned: list[PlannedChallenge] = []
     included: set[ChallengeType] = set()

@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 
 from app.agent.subagents.root_cause_agent import RootCauseAgent
@@ -175,3 +177,18 @@ def test_malformed_controller_output_falls_back_without_extra_test(tmp_path, mon
     result = run_agent(tmp_path, monkeypatch, controller)
     assert result["investigation_iterations"][0]["rejection_reason"] == "malformed_output"
     assert len(result["investigation_iterations"]) == len(result["tests_executed"]) == 3
+
+
+def test_provider_failure_logs_warning_with_structured_fields(tmp_path, monkeypatch, caplog):
+    def controller(*_):
+        raise RuntimeError("provider unavailable")
+
+    with caplog.at_level(logging.WARNING, logger="app.services.investigation_controller"):
+        run_agent(tmp_path, monkeypatch, controller)
+
+    records = [item for item in caplog.records if item.name == "app.services.investigation_controller"]
+    assert records
+    assert all(item.levelname == "WARNING" for item in records)
+    assert all(item.investigation_id == "controller-test" for item in records)
+    assert all(item.decision_source == "deterministic_fallback" for item in records)
+    assert all(item.rejection == "provider_failure" for item in records)

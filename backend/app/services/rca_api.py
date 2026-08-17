@@ -178,6 +178,35 @@ def _find_test_and_segment(
     )
 
 
+def _prioritization_rationale(
+    state: InvestigationState, target: InvestigationPathNode
+) -> str | None:
+    """Resolve the LLM's pre-test rationale for target's selected_dimension.
+
+    Looks up state.hypothesis_planning_records by explicit planning_id
+    equality (never by list position or call order), then requires the
+    matching proposal within that record to be the LLM's own
+    (source == "llm"). Null in every other case -- provider failure, the
+    LLM never proposing this dimension, or deterministic_fallback having
+    supplied it -- with no synthesized substitute text.
+    """
+    if target.planning_id is None or target.selected_dimension is None:
+        return None
+    record = next(
+        (item for item in state.hypothesis_planning_records if item.planning_id == target.planning_id),
+        None,
+    )
+    if record is None:
+        return None
+    proposal = next(
+        (item for item in record.validated_proposals if item.target_dimension == target.selected_dimension),
+        None,
+    )
+    if proposal is None or proposal.source != "llm":
+        return None
+    return proposal.brief_reason
+
+
 def _path_projection(
     state: InvestigationState,
     conclusion: InvestigationConclusion,
@@ -284,6 +313,7 @@ def _path_projection(
         global_contribution_pct=target.global_contribution_pct,
         evidence_strength=target.evidence_strength,
         evidence_refs=(reference,),
+        prioritization_rationale=_prioritization_rationale(state, target),
     )
     decomposition = RCATargetDecompositionV1(
         source_scope=source_scope,

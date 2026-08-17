@@ -3,8 +3,20 @@ from uuid import uuid4
 import pandas as pd
 import pytest
 
-from app.domain.root_cause_contracts import SingleLevelInvestigationRequest
-from app.services.rca_api import RCAAPIServiceError, load_governed_dataset, map_investigation_response
+from app.domain.root_cause_contracts import (
+    AdditiveKPISemanticDefinition,
+    HypothesisPlanningRecord,
+    InvestigationPathNode,
+    InvestigationState,
+    PlannedHypothesis,
+    SingleLevelInvestigationRequest,
+)
+from app.services.rca_api import (
+    RCAAPIServiceError,
+    _prioritization_rationale,
+    load_governed_dataset,
+    map_investigation_response,
+)
 from app.services.root_cause import run_single_level_investigation
 
 
@@ -178,3 +190,101 @@ def test_governed_dataset_loader_rejects_outside_missing_and_unsupported_paths(t
         with pytest.raises(RCAAPIServiceError) as error:
             load_governed_dataset(type("Dataset", (), {"file_path": str(path)})(), tmp_path)
         assert error.value.code == "dataset_unavailable"
+
+
+def _state(records):
+    return InvestigationState(
+        investigation_id=str(uuid4()),
+        goal="Investigate revenue",
+        kpi=AdditiveKPISemanticDefinition(metric_name="Revenue", metric_column="revenue", time_column="date"),
+        baseline_period="2026-01",
+        comparison_period="2026-02",
+        candidate_dimensions=("country", "device"),
+        outcome="strongest_supported_driver",
+        stopping_reason="Controlled investigation completed.",
+        hypothesis_planning_records=tuple(records),
+    )
+
+
+def _hp(hypothesis_id, target_dimension, priority, source, brief_reason=None):
+    return PlannedHypothesis(
+        hypothesis_id=hypothesis_id,
+        target_dimension=target_dimension,
+        priority=priority,
+        statement=f"{target_dimension} may contain a material segment contributor.",
+        reason_code="potential_explanatory_value",
+        brief_reason=brief_reason,
+        source=source,
+    )
+
+
+def test_prioritization_rationale_populated_when_llm_proposed_the_winning_dimension():
+    record = HypothesisPlanningRecord(
+        planning_id="IP1",
+        allowed_dimensions=("country", "device"),
+        validated_proposals=(_hp("HP1", "country", 1, "llm", "Country splits often shift after promo rollouts."),),
+        planner_mode="llm",
+    )
+    state = _state([record])
+    target = InvestigationPathNode(
+        node_id="IN1", depth=1, parent_node_id="IN0", planning_id="IP1", selected_dimension="country"
+    )
+
+    assert _prioritization_rationale(state, target) == "Country splits often shift after promo rollouts."
+
+
+def test_prioritization_rationale_null_when_winning_dimension_came_from_deterministic_fallback():
+    record = HypothesisPlanningRecord(
+        planning_id="IP1",
+        allowed_dimensions=("country", "device"),
+        validated_proposals=(_hp("HP1", "country", 1, "deterministic_fallback"),),
+        planner_mode="deterministic_fallback",
+        fallback_reason="provider_failure",
+    )
+    state = _state([record])
+    target = InvestigationPathNode(
+        node_id="IN1", depth=1, parent_node_id="IN0", planning_id="IP1", selected_dimension="country"
+    )
+
+    assert _prioritization_rationale(state, target) is None
+
+
+def test_prioritization_rationale_null_when_llm_proposed_different_dimensions_than_the_winner():
+    record = HypothesisPlanningRecord(
+        planning_id="IP1",
+        allowed_dimensions=("country", "device"),
+        validated_proposals=(
+            _hp("HP1", "device", 1, "llm", "Device mix looked uneven in the scope summary."),
+            _hp("HP2", "country", 2, "deterministic_fallback"),
+        ),
+        planner_mode="llm_with_fallback",
+    )
+    state = _state([record])
+    target = InvestigationPathNode(
+        node_id="IN1", depth=1, parent_node_id="IN0", planning_id="IP1", selected_dimension="country"
+    )
+
+    assert _prioritization_rationale(state, target) is None
+
+
+def test_prioritization_rationale_resolves_by_planning_id_not_list_position():
+    winning_record = HypothesisPlanningRecord(
+        planning_id="IP2",
+        allowed_dimensions=("device",),
+        validated_proposals=(_hp("HP1", "device", 1, "llm", "Device mix is the current business focus."),),
+        planner_mode="llm",
+    )
+    decoy_record = HypothesisPlanningRecord(
+        planning_id="IP1",
+        allowed_dimensions=("device",),
+        validated_proposals=(_hp("HP1", "device", 1, "llm", "Wrong record: this must never be selected."),),
+        planner_mode="llm",
+    )
+    # Deliberately out of call order: IP2 (the actual match) is listed before
+    # IP1, so a positional/first-match resolver would return the decoy text.
+    state = _state([winning_record, decoy_record])
+    target = InvestigationPathNode(
+        node_id="IN2", depth=2, parent_node_id="IN1", planning_id="IP2", selected_dimension="device"
+    )
+
+    assert _prioritization_rationale(state, target) == "Device mix is the current business focus."

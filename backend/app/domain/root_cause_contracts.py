@@ -703,6 +703,10 @@ class InvestigationPathNode(RCAContract):
     depth: int = Field(ge=0)
     parent_node_id: str | None = Field(default=None, pattern=r"^IN\d+$")
     filter_path: tuple[InvestigationFilter, ...] = Field(default_factory=tuple)
+    # Explicit ID link (not positional) to the HypothesisPlanningRecord whose
+    # planning, in the PARENT scope, produced this node's selected_dimension.
+    # None on the root node, which has no selected_dimension to explain.
+    planning_id: str | None = Field(default=None, pattern=r"^IP\d+$")
     selected_dimension: str | None = None
     selected_segment: str | None = None
     parent_kpi_movement: float | None = None

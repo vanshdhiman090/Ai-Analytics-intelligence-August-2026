@@ -933,7 +933,7 @@ def run_evidence_driven_investigation(
                 raise RuntimeError("A controller iteration must create exactly one dimension-test evidence record")
         return scope_tests, record
 
-    root_tests, _ = run_scope(prepared, (), request.candidate_dimensions, global_movement, "IN0")
+    root_tests, root_record = run_scope(prepared, (), request.candidate_dimensions, global_movement, "IN0")
     if len(root_tests) != len(request.candidate_dimensions) or any(not test.reconciles_to_kpi_change for test in root_tests):
         return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="inconclusive", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=_root_hypotheses(request.candidate_dimensions, root_tests), tests_executed=tuple(all_tests), evidence=tuple(evidence), stopping_reason="Controlled root scope did not achieve deterministic analytical sufficiency.", hypothesis_planning_records=tuple(planning_records), investigation_iterations=tuple(iterations))
     best, winner_test = _leading_contributor(root_tests, request.material_contribution_pct)
@@ -942,7 +942,7 @@ def run_evidence_driven_investigation(
         return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="inconclusive", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=_root_hypotheses(request.candidate_dimensions, root_tests), tests_executed=tuple(all_tests), evidence=tuple(evidence), evidence_strength="insufficient", stopping_reason="No tested segment supplied a material aligned contribution.", investigation_path=(root_node,), hypothesis_planning_records=tuple(planning_records), investigation_iterations=tuple(iterations))
 
     path = [InvestigationFilter(dimension=best.dimension, segment=best.segment)]
-    nodes = [root_node, InvestigationPathNode(node_id="IN1", depth=1, parent_node_id="IN0", filter_path=tuple(path), selected_dimension=best.dimension, selected_segment=best.segment, parent_kpi_movement=global_movement, segment_movement=best.signed_change, local_contribution_pct=best.contribution_to_net_change_pct, global_contribution_pct=best.contribution_to_net_change_pct, remaining_dimensions=tuple(dimension for dimension in request.candidate_dimensions if dimension != best.dimension), evidence_ids=(winner_test.evidence_id,), evidence_strength=_investigation_strength(best.contribution_to_net_change_pct))]
+    nodes = [root_node, InvestigationPathNode(node_id="IN1", depth=1, parent_node_id="IN0", filter_path=tuple(path), planning_id=root_record.planning_id, selected_dimension=best.dimension, selected_segment=best.segment, parent_kpi_movement=global_movement, segment_movement=best.signed_change, local_contribution_pct=best.contribution_to_net_change_pct, global_contribution_pct=best.contribution_to_net_change_pct, remaining_dimensions=tuple(dimension for dimension in request.candidate_dimensions if dimension != best.dimension), evidence_ids=(winner_test.evidence_id,), evidence_strength=_investigation_strength(best.contribution_to_net_change_pct))]
     while True:
         node = nodes[-1]
         reason: str | None = None
@@ -967,7 +967,7 @@ def run_evidence_driven_investigation(
         if min(len(baseline_rows), len(comparison_rows)) < request.minimum_rows_per_period_for_drill_down:
             nodes[-1] = node.model_copy(update={"data_health": scoped_health, "evidence_ids": tuple(dict.fromkeys((*node.evidence_ids, *health_ids))), "stopping_reason": "insufficient_rows"})
             break
-        scope_tests, _ = run_scope(scoped, tuple(path), node.remaining_dimensions, float(node.segment_movement), node.node_id)
+        scope_tests, scope_record = run_scope(scoped, tuple(path), node.remaining_dimensions, float(node.segment_movement), node.node_id)
         nodes[-1] = node.model_copy(update={"data_health": scoped_health, "tested_dimensions": tuple(test.dimension for test in scope_tests), "test_ids": tuple(test.test_id for test in scope_tests), "evidence_ids": tuple(dict.fromkeys((*node.evidence_ids, *health_ids, *(test.evidence_id for test in scope_tests))))})
         if len(scope_tests) != len(node.remaining_dimensions) or any(not test.reconciles_to_kpi_change for test in scope_tests):
             nodes[-1] = nodes[-1].model_copy(update={"stopping_reason": "reconciliation_failure"})
@@ -980,7 +980,7 @@ def run_evidence_driven_investigation(
         path.append(InvestigationFilter(dimension=child.dimension, segment=child.segment))
         depth = node.depth + 1
         global_share = child.signed_change / global_movement * 100
-        nodes.append(InvestigationPathNode(node_id=f"IN{depth}", depth=depth, parent_node_id=node.node_id, filter_path=tuple(path), selected_dimension=child.dimension, selected_segment=child.segment, parent_kpi_movement=node.segment_movement, segment_movement=child.signed_change, local_contribution_pct=child.contribution_to_net_change_pct, global_contribution_pct=global_share, remaining_dimensions=tuple(dimension for dimension in node.remaining_dimensions if dimension != child.dimension), evidence_ids=(child_test.evidence_id,), evidence_strength=_investigation_strength(child.contribution_to_net_change_pct)))
+        nodes.append(InvestigationPathNode(node_id=f"IN{depth}", depth=depth, parent_node_id=node.node_id, filter_path=tuple(path), planning_id=scope_record.planning_id, selected_dimension=child.dimension, selected_segment=child.segment, parent_kpi_movement=node.segment_movement, segment_movement=child.signed_change, local_contribution_pct=child.contribution_to_net_change_pct, global_contribution_pct=global_share, remaining_dimensions=tuple(dimension for dimension in node.remaining_dimensions if dimension != child.dimension), evidence_ids=(child_test.evidence_id,), evidence_strength=_investigation_strength(child.contribution_to_net_change_pct)))
 
     if len(all_tests) > ceiling:
         raise RuntimeError("Controlled investigation exceeded its derived test ceiling")

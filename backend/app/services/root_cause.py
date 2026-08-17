@@ -586,6 +586,33 @@ def _normalized_dimension_values(values: pd.Series) -> pd.Series:
     return as_text.mask(missing, "__MISSING__")
 
 
+def _segment_presence_counts(
+    raw_scope: pd.DataFrame, dimension: str, periods: tuple[str, str]
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Per-segment/per-period raw row counts and null-metric row counts.
+
+    Computed from raw_scope BEFORE any notna() filter, so a segment that is
+    genuinely absent from a period (row count 0) stays distinguishable from
+    one whose rows exist but had no usable metric value (row count > 0,
+    null count == row count) -- a distinction the notna()-filtered pivot
+    used for baseline_value/comparison_value cannot make once it collapses
+    both to fill_value=0.
+    """
+    period_rows = raw_scope[raw_scope["_investigation_period"].isin(periods)].copy()
+    period_rows["_investigation_segment"] = _normalized_dimension_values(period_rows[dimension])
+    grouped = period_rows.groupby(["_investigation_segment", "_investigation_period"], dropna=False)["_investigation_metric"]
+    row_counts = grouped.size().unstack(fill_value=0)
+    null_counts = grouped.apply(lambda values: int(values.isna().sum())).unstack(fill_value=0)
+    return row_counts, null_counts
+
+
+def _segment_presence_lookup(
+    counts: pd.DataFrame, index: pd.Index, periods: tuple[str, str]
+) -> pd.DataFrame:
+    """Align a presence-counts pivot to the main contribution pivot's segment index/period columns."""
+    return counts.reindex(index=index, columns=list(periods), fill_value=0)
+
+
 def _safe_period_frame(
     frame: pd.DataFrame, request: SingleLevelInvestigationRequest
 ) -> tuple[pd.DataFrame, list[InvestigationHealthCheck], list[InvestigationEvidence]]:
@@ -678,6 +705,9 @@ def run_single_level_investigation(
         partition = selected.copy()
         partition["_investigation_segment"] = _normalized_dimension_values(partition[dimension])
         pivot = partition.groupby(["_investigation_segment", "_investigation_period"], dropna=False)["_investigation_metric"].sum().unstack(fill_value=0)
+        raw_row_counts, raw_null_counts = _segment_presence_counts(prepared, dimension, (request.baseline_period, request.comparison_period))
+        raw_row_counts = _segment_presence_lookup(raw_row_counts, pivot.index, (request.baseline_period, request.comparison_period))
+        raw_null_counts = _segment_presence_lookup(raw_null_counts, pivot.index, (request.baseline_period, request.comparison_period))
         contributions: list[SegmentContribution] = []
         for segment, row in pivot.iterrows():
             before, after = float(row.get(request.baseline_period, 0)), float(row.get(request.comparison_period, 0))
@@ -685,7 +715,19 @@ def run_single_level_investigation(
             share = change / net * 100
             aligned = change * net > 0
             direction = "with_incident" if aligned else "positive_offset" if change * net < 0 else "neutral"
-            item = SegmentContribution(dimension=dimension, segment="<missing>" if pd.isna(segment) else str(segment), baseline_value=before, comparison_value=after, signed_change=change, contribution_to_net_change_pct=share, direction=direction)
+            item = SegmentContribution(
+                dimension=dimension,
+                segment="<missing>" if pd.isna(segment) else str(segment),
+                baseline_value=before,
+                comparison_value=after,
+                signed_change=change,
+                contribution_to_net_change_pct=share,
+                direction=direction,
+                baseline_row_count=int(raw_row_counts.loc[segment, request.baseline_period]),
+                comparison_row_count=int(raw_row_counts.loc[segment, request.comparison_period]),
+                baseline_null_metric_row_count=int(raw_null_counts.loc[segment, request.baseline_period]),
+                comparison_null_metric_row_count=int(raw_null_counts.loc[segment, request.comparison_period]),
+            )
             contributions.append(item)
             if aligned:
                 candidates.append((item, dimension, f"IE{len(evidence) + 1}"))
@@ -773,6 +815,9 @@ def _scoped_dimension_tests(
         partition = valid.copy()
         partition["_investigation_segment"] = _normalized_dimension_values(partition[dimension])
         pivot = partition.groupby(["_investigation_segment", "_investigation_period"], dropna=False)["_investigation_metric"].sum().unstack(fill_value=0)
+        raw_row_counts, raw_null_counts = _segment_presence_counts(scope, dimension, (request.baseline_period, request.comparison_period))
+        raw_row_counts = _segment_presence_lookup(raw_row_counts, pivot.index, (request.baseline_period, request.comparison_period))
+        raw_null_counts = _segment_presence_lookup(raw_null_counts, pivot.index, (request.baseline_period, request.comparison_period))
         contributions: list[SegmentContribution] = []
         for segment, row in pivot.iterrows():
             before = float(row.get(request.baseline_period, 0.0))
@@ -780,7 +825,19 @@ def _scoped_dimension_tests(
             change = after - before
             local_share = change / parent_movement * 100
             direction = "with_incident" if change * parent_movement > 0 else "positive_offset" if change * parent_movement < 0 else "neutral"
-            item = SegmentContribution(dimension=dimension, segment=str(segment), baseline_value=before, comparison_value=after, signed_change=change, contribution_to_net_change_pct=local_share, direction=direction)
+            item = SegmentContribution(
+                dimension=dimension,
+                segment=str(segment),
+                baseline_value=before,
+                comparison_value=after,
+                signed_change=change,
+                contribution_to_net_change_pct=local_share,
+                direction=direction,
+                baseline_row_count=int(raw_row_counts.loc[segment, request.baseline_period]),
+                comparison_row_count=int(raw_row_counts.loc[segment, request.comparison_period]),
+                baseline_null_metric_row_count=int(raw_null_counts.loc[segment, request.baseline_period]),
+                comparison_null_metric_row_count=int(raw_null_counts.loc[segment, request.comparison_period]),
+            )
             contributions.append(item)
             if direction == "with_incident":
                 aligned.append(item)

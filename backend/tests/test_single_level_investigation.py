@@ -185,3 +185,54 @@ def test_negligible_parent_movement_stops_before_child_percentages():
     state = run_single_level_investigation(pd.DataFrame(_rows_for_recursive_path()), request(candidate_dimensions=["country", "device", "customer_type"], maximum_depth=3, negligible_parent_movement_tolerance=100))
     assert state.investigation_path[-1].selected_segment == "Germany"
     assert state.investigation_path[-1].stopping_reason == "negligible_parent_movement"
+
+
+def _segment_row_count_frame():
+    """Germany: absent from comparison. Austria: fully-null baseline metric.
+    France: normal real data in both periods (control)."""
+    return pd.DataFrame([
+        {"date": "2026-01-01", "country": "Germany", "revenue": 100},
+        {"date": "2026-01-01", "country": "Germany", "revenue": 100},
+        {"date": "2026-01-01", "country": "Austria", "revenue": None},
+        {"date": "2026-01-01", "country": "Austria", "revenue": None},
+        {"date": "2026-02-01", "country": "Austria", "revenue": 50},
+        {"date": "2026-01-01", "country": "France", "revenue": 100},
+        {"date": "2026-02-01", "country": "France", "revenue": 40},
+    ])
+
+
+def _assert_segment_row_counts_are_captured(country_test):
+    by_segment = {item.segment: item for item in country_test.segment_contributions}
+
+    germany = by_segment["Germany"]
+    assert (germany.baseline_row_count, germany.comparison_row_count) == (2, 0)
+    assert (germany.baseline_null_metric_row_count, germany.comparison_null_metric_row_count) == (0, 0)
+    assert germany.comparison_value == 0  # existing fill_value=0 behaviour is unchanged by Milestone A
+
+    austria = by_segment["Austria"]
+    assert (austria.baseline_row_count, austria.comparison_row_count) == (2, 1)
+    assert (austria.baseline_null_metric_row_count, austria.comparison_null_metric_row_count) == (2, 0)
+    assert austria.baseline_value == 0  # existing fill_value=0 behaviour is unchanged by Milestone A
+
+    france = by_segment["France"]
+    assert (france.baseline_row_count, france.comparison_row_count) == (1, 1)
+    assert (france.baseline_null_metric_row_count, france.comparison_null_metric_row_count) == (0, 0)
+    assert (france.baseline_value, france.comparison_value) == (100, 40)
+
+
+def test_segment_row_counts_are_captured_in_the_plain_investigation_path():
+    state = run_single_level_investigation(
+        _segment_row_count_frame(),
+        request(candidate_dimensions=["country"], comparison_coverage_ratio=0.01),
+    )
+    country_test = next(test for test in state.tests_executed if test.dimension == "country")
+    _assert_segment_row_counts_are_captured(country_test)
+
+
+def test_segment_row_counts_are_captured_in_the_evidence_driven_path():
+    state = run_single_level_investigation(
+        _segment_row_count_frame(),
+        request(candidate_dimensions=["country"], comparison_coverage_ratio=0.01, evidence_driven_control_enabled=True),
+    )
+    country_test = next(test for test in state.tests_executed if test.dimension == "country")
+    _assert_segment_row_counts_are_captured(country_test)

@@ -484,6 +484,16 @@ class SegmentContribution(RCAContract):
     signed_change: float
     contribution_to_net_change_pct: float | None
     direction: Literal["with_incident", "positive_offset", "negative_pressure", "neutral"]
+    # Raw row presence per period, captured before the notna() filter and the
+    # unstack(fill_value=0) pivot collapse genuine absence, a null-derived
+    # value, and a genuine zero into the same 0. row_count == 0 means the
+    # segment had no raw rows in that period at all; null_metric_row_count
+    # == row_count (with row_count > 0) means every raw row existed but had
+    # no usable metric value. Data capture only -- not yet read anywhere.
+    baseline_row_count: int = Field(default=0, ge=0)
+    comparison_row_count: int = Field(default=0, ge=0)
+    baseline_null_metric_row_count: int = Field(default=0, ge=0)
+    comparison_null_metric_row_count: int = Field(default=0, ge=0)
 
 
 class DimensionContributionTest(RCAContract):

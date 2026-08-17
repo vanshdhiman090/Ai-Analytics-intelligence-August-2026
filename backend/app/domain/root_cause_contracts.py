@@ -76,12 +76,14 @@ ChallengeType = Literal[
     "leading_segment_remainder",
     "offset_cancellation",
     "data_quality",
+    "segment_reliability",
 ]
 ChallengeReasonCode = Literal[
     "compare_tested_decompositions",
     "assess_leading_segment_coverage",
     "assess_opposing_offsets",
     "assess_target_scope_health",
+    "assess_segment_reliability",
 ]
 ChallengeProposalSource = Literal["llm", "deterministic_fallback"]
 ChallengeProposalRejectionReason = Literal[
@@ -113,6 +115,11 @@ VerificationResultCode = Literal[
     "target_scope_quality_safe",
     "target_scope_quality_caution",
     "target_scope_quality_blocking",
+    "segment_sample_sufficient",
+    "insufficient_segment_sample",
+    "segment_structurally_absent_caution",
+    "segment_structurally_absent_material",
+    "segment_baseline_unavailable",
 ]
 VerificationRobustnessStatus = Literal[
     "not_run",
@@ -174,6 +181,7 @@ ConclusionCaveatCode = Literal[
     "verification_not_completed",
     "no_material_driver",
     "robustness_applies_to_upstream_scope_only",
+    "insufficient_segment_reliability",
 ]
 
 
@@ -618,6 +626,12 @@ class VerificationPolicyV1(RCAContract):
     leading_segment_remainder_material_ratio: float = Field(default=0.50, ge=0.0)
     offset_caution_ratio: float = Field(default=0.10, ge=0.0)
     offset_material_ratio: float = Field(default=0.20, ge=0.0)
+    # Below this many raw rows in either period, the target segment's own
+    # baseline/comparison value is not a reliable estimate. Matches
+    # SingleLevelInvestigationRequest.minimum_rows_per_period_for_drill_down
+    # (also 5) -- the only other row-count threshold in this codebase --
+    # rather than inventing an unrelated number.
+    minimum_segment_row_count: int = Field(default=5, ge=1)
 
     @model_validator(mode="after")
     def caution_thresholds_precede_material_thresholds(self) -> "VerificationPolicyV1":

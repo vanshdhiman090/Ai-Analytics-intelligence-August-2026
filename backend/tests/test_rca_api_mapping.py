@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from uuid import uuid4
 
 import pandas as pd
@@ -265,6 +266,142 @@ def test_prioritization_rationale_null_when_llm_proposed_different_dimensions_th
     )
 
     assert _prioritization_rationale(state, target) is None
+
+
+def _no_provider(*_args, **_kwargs):
+    raise RuntimeError("no provider in test")
+
+
+def _verified_request(candidate_dimensions, **updates):
+    payload = {
+        "investigation_id": str(uuid4()),
+        "goal": "Investigate revenue",
+        "kpi": {
+            "metric_name": "Revenue",
+            "metric_column": "revenue",
+            "time_column": "date",
+            "aggregation": "sum",
+            "time_grain": "month",
+            "unit": "EUR",
+        },
+        "baseline_period": "2026-01",
+        "comparison_period": "2026-02",
+        "candidate_dimensions": candidate_dimensions,
+        "maximum_depth": 1,
+        "minimum_rows_per_period_for_drill_down": 1,
+        "evidence_driven_control_enabled": True,
+        "self_falsification_enabled": True,
+        "conclusion_compilation_enabled": True,
+        # Coverage checks are scope-wide and unrelated to what this challenge
+        # tests; relaxed so they never pre-empt the segment-reliability checks.
+        "comparison_coverage_ratio": 0.01,
+    }
+    payload.update(updates)
+    return SingleLevelInvestigationRequest.model_validate(payload)
+
+
+def _verified_response(rows, candidate_dimensions, **request_updates):
+    request = _verified_request(candidate_dimensions, **request_updates)
+    with (
+        patch("app.services.hypothesis_planner.generate_structured", _no_provider),
+        patch("app.services.investigation_controller.generate_structured", _no_provider),
+        patch("app.services.investigation_verifier.generate_structured", _no_provider),
+    ):
+        state = run_single_level_investigation(pd.DataFrame(rows), request)
+    return state, map_investigation_response(state)
+
+
+def test_segment_reliability_downgrades_insufficient_sample_to_weak_and_not_ready():
+    rows = []
+    for _ in range(2):
+        rows.append({"date": "2026-01-01", "region": "Tiny", "revenue": 500})
+        rows.append({"date": "2026-02-01", "region": "Tiny", "revenue": 300})
+    for _ in range(5):
+        rows.append({"date": "2026-01-01", "region": "Big", "revenue": 100})
+        rows.append({"date": "2026-02-01", "region": "Big", "revenue": 90})
+    state, response = _verified_response(rows, ["region"])
+
+    assert state.leading_dimension == "region"
+    assert state.leading_segment == "Tiny"
+    assert state.verification_status == "weakened"
+    assert state.verification_evidence_strength == "weak"
+    assert response.conclusion.readiness.status == "not_ready"
+    assert response.conclusion.readiness.reason == "insufficient_evidence"
+    assert "insufficient_segment_reliability" in response.conclusion.caveats
+    issue = next(item for item in response.data_quality.issues if item.code == "insufficient_segment_sample")
+    assert issue.severity == "caution"
+
+
+def test_segment_reliability_forces_abstention_on_material_structural_absence():
+    rows = []
+    for _ in range(6):
+        rows.append({"date": "2026-01-01", "region": "R", "revenue": 1000})
+    for _ in range(5):
+        rows.append({"date": "2026-01-01", "region": "Other", "revenue": 100})
+        rows.append({"date": "2026-02-01", "region": "Other", "revenue": 95})
+    state, response = _verified_response(rows, ["region"])
+
+    assert state.leading_dimension == "region"
+    assert state.leading_segment == "R"
+    assert state.verification_status == "abstain"
+    assert state.verification_evidence_strength == "insufficient"
+    assert response.conclusion.readiness.status == "not_ready"
+    assert response.conclusion.claim not in {"leading_tested_contributor", "robust_descriptive_explanation"}
+    assert response.data_quality.status == "blocked"
+    issue = next(item for item in response.data_quality.issues if item.code == "segment_structurally_absent")
+    assert issue.severity == "blocking"
+    # Row counts must be visible in the public response, not hidden behind the caveat code.
+    evidence = next(item for item in response.supporting_evidence if item.evidence_ref in issue.evidence_refs)
+    assert evidence.baseline_row_count == 6
+    assert evidence.comparison_row_count == 0
+
+
+def test_segment_reliability_forces_abstention_on_null_baseline_with_no_movement_attributed():
+    rows = []
+    for _ in range(6):
+        rows.append({"date": "2026-01-01", "region": "N", "revenue": None})
+        rows.append({"date": "2026-02-01", "region": "N", "revenue": 80})
+    for _ in range(5):
+        rows.append({"date": "2026-01-01", "region": "Other", "revenue": 100})
+        rows.append({"date": "2026-02-01", "region": "Other", "revenue": 100})
+    state, response = _verified_response(rows, ["region"])
+
+    assert state.leading_dimension == "region"
+    assert state.leading_segment == "N"
+    assert state.verification_status == "abstain"
+    assert state.verification_evidence_strength == "insufficient"
+    assert response.conclusion.readiness.status == "not_ready"
+    # "No movement figure attributed": the system does not certify this as a
+    # validated finding -- neither claim allows it, and data_quality flags
+    # the baseline as unavailable rather than presenting a computed change.
+    assert response.conclusion.claim not in {"leading_tested_contributor", "robust_descriptive_explanation"}
+    assert response.data_quality.status == "blocked"
+    issue = next(item for item in response.data_quality.issues if item.code == "segment_baseline_unavailable")
+    assert issue.severity == "blocking"
+    evidence = next(item for item in response.supporting_evidence if item.evidence_ref in issue.evidence_refs)
+    assert evidence.baseline_row_count == 6
+    assert evidence.comparison_row_count == 6
+
+
+def test_segment_reliability_does_not_alter_outcome_for_a_normal_control_segment():
+    rows = []
+    for _ in range(6):
+        rows.append({"date": "2026-01-01", "region": "Big", "revenue": 100})
+        rows.append({"date": "2026-02-01", "region": "Big", "revenue": 70})
+        rows.append({"date": "2026-01-01", "region": "Small", "revenue": 50})
+        rows.append({"date": "2026-02-01", "region": "Small", "revenue": 48})
+    state, response = _verified_response(rows, ["region"])
+
+    assert state.leading_dimension == "region"
+    assert state.leading_segment == "Big"
+    assert state.verification_status == "robust_no_material_challenge"
+    assert state.verification_evidence_strength == "strong"
+    assert response.conclusion.readiness.status == "ready_with_caveats"
+    assert response.conclusion.claim == "robust_descriptive_explanation"
+    assert "insufficient_segment_reliability" not in response.conclusion.caveats
+    assert response.data_quality.status == "pass"
+    assert response.data_quality.issues == ()
+    assert "segment_sample_sufficient" in [item.result_code for item in state.verification_records]
 
 
 def test_prioritization_rationale_resolves_by_planning_id_not_list_position():

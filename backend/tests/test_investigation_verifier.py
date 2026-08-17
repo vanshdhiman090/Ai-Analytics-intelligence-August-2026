@@ -136,7 +136,7 @@ def test_omitted_and_duplicate_challenges_are_completed_once(tmp_path):
 
     result = verify_investigation(state, request, generator=duplicate)
     types = [item.challenge_type for item in result.verification_records]
-    assert len(types) == len(set(types)) == 4
+    assert len(types) == len(set(types)) == 5
     assert result.challenge_planning_record.planner_mode == "llm_with_fallback"
     assert any(
         item.rejection_reason == "duplicate_challenge"

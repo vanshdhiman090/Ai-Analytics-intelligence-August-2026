@@ -373,6 +373,13 @@ def compile_investigation_conclusion(
         "leading_segment_remainder_material",
     } & result_codes:
         caveats.append("leading_segment_remainder")
+    if {
+        "insufficient_segment_sample",
+        "segment_structurally_absent_caution",
+        "segment_structurally_absent_material",
+        "segment_baseline_unavailable",
+    } & result_codes:
+        caveats.append("insufficient_segment_reliability")
     if state.verification_status == "competing_explanations":
         caveats.append("competing_decomposition")
     if downstream_stop:

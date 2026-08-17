@@ -12,15 +12,21 @@ import pandas as pd
 from app.agent.subagents.root_cause_agent import RootCauseAgent
 
 
-def _rows_from_changes(cells):
+def _rows_from_changes(cells, rows_per_period=5):
+    """Split each cell's total across rows_per_period rows (same total, more
+    raw rows) so per-country row counts clear the segment-reliability
+    minimum-sample threshold; every totals-based assertion is unaffected."""
     rows = []
     for country, device, channel, change in cells:
-        rows.extend(
-            [
-                {"date": "2026-01-01", "country": country, "device": device, "channel": channel, "revenue": 200.0},
-                {"date": "2026-02-01", "country": country, "device": device, "channel": channel, "revenue": 200.0 + change},
-            ]
-        )
+        baseline_share = 200.0 / rows_per_period
+        comparison_share = (200.0 + change) / rows_per_period
+        for _ in range(rows_per_period):
+            rows.extend(
+                [
+                    {"date": "2026-01-01", "country": country, "device": device, "channel": channel, "revenue": baseline_share},
+                    {"date": "2026-02-01", "country": country, "device": device, "channel": channel, "revenue": comparison_share},
+                ]
+            )
     return rows
 
 

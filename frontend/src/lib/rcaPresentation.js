@@ -44,6 +44,7 @@ export const CAVEAT_LABELS = {
   verification_not_completed: "Independent verification was not completed.",
   no_material_driver: "No tested segment contributed enough movement to lead the investigation.",
   robustness_applies_to_upstream_scope_only: "Verification does not apply to the selected deepest target.",
+  insufficient_segment_reliability: "The leading segment's own raw data could not be independently verified as reliable.",
 };
 
 export const NEXT_ACTION_LABELS = {
@@ -66,6 +67,9 @@ export const QUALITY_LABELS = {
   metric_completeness_failed: "KPI completeness failed",
   insufficient_scope_rows: "The downstream scope has too few rows",
   other_bounded_quality_issue: "A bounded data-quality issue was detected",
+  insufficient_segment_sample: "This segment has too few raw rows in one period to trust the measured change",
+  segment_structurally_absent: "This segment's rows disappeared or newly appeared between periods — a structural change, not a measured decline",
+  segment_baseline_unavailable: "This segment's baseline period has no usable metric values — there is no baseline to compare against",
 };
 
 export function titleize(value) {

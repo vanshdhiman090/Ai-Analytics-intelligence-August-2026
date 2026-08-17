@@ -55,6 +55,9 @@ function ConclusionPanel({ result }) {
             <span>Leading tested contributor</span>
             <h3>{titleize(leading.dimension)} · {leading.segment}</h3>
             <p>{formatScope(leading.target_scope)}</p>
+            {leading.prioritization_rationale && (
+              <p><strong>Why this was checked</strong> — the model's reason for testing this dimension, written before any results were known: “{leading.prioritization_rationale}”</p>
+            )}
           </div>
           <dl className="leader-metrics">
             <div><dt>Signed movement</dt><dd>{formatValue(leading.signed_change, movement.unit, { signed: true })}</dd></div>

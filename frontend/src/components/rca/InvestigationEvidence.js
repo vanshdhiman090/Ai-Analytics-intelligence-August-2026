@@ -5,7 +5,15 @@ function EvidenceCard({ evidence, unit }) {
     <article className="evidence-card" id={`evidence-${evidence.evidence_ref}`} tabIndex="-1">
       <header><span>{evidence.evidence_ref}</span><strong>{titleize(evidence.kind)}</strong></header>
       {evidence.kind === "data_quality" ? (
-        <p>{QUALITY_LABELS[evidence.quality_code] || "A bounded data-quality issue was detected."}</p>
+        <>
+          <p>{QUALITY_LABELS[evidence.quality_code] || titleize(evidence.quality_code)}</p>
+          {(evidence.baseline_row_count != null || evidence.comparison_row_count != null) && (
+            <dl>
+              <div><dt>Baseline rows</dt><dd>{evidence.baseline_row_count ?? "Not established"}</dd></div>
+              <div><dt>Comparison rows</dt><dd>{evidence.comparison_row_count ?? "Not established"}</dd></div>
+            </dl>
+          )}
+        </>
       ) : (
         <dl>
           {evidence.dimension && <div><dt>Test</dt><dd>{titleize(evidence.dimension)} · {evidence.segment}</dd></div>}

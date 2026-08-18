@@ -41,7 +41,7 @@ export default function InvestigationPath({ steps, unit }) {
               <div><dt>Segment movement</dt><dd>{formatValue(step.segment_movement, unit, { signed: true })}</dd></div>
               <div><dt>Share of parent</dt><dd>{formatPercent(step.local_contribution_pct)}</dd></div>
               <div><dt>Share of total</dt><dd>{formatPercent(step.global_contribution_pct)}</dd></div>
-              <div><dt>Evidence strength</dt><dd>{titleize(step.evidence_strength)}</dd></div>
+              <div><dt>Contribution magnitude</dt><dd>{titleize(step.evidence_strength)}</dd></div>
             </dl>
             <EvidenceLinks refs={step.evidence_refs} />
           </li>

@@ -216,6 +216,10 @@ test("single-dataset RCA flow submits the exact public request and renders signe
   expect(await globalPathDescription.evaluate((element) => getComputedStyle(element).display)).toBe("block");
   await expect(page.getByRole("heading", { name: "Leading tested contributor", exact: true })).toBeVisible();
   await expect(page.locator("label.dimension-option", { hasText: "Constant Field" })).toHaveCount(0);
+  // No target-affecting data-quality issue was returned: the early warning banner is a no-op.
+  await expect(page.locator(".quality-alert")).toHaveCount(0);
+  await expect(page.locator(".leader-metrics dt", { hasText: "Contribution magnitude" })).toBeVisible();
+  await expect(page.locator(".path-metrics dt", { hasText: "Contribution magnitude" })).toHaveCount(3);
   await expect(page.getByText("+111.8%", { exact: true }).first()).toBeVisible();
   await expect(page.locator(".decomposition-grid div", { hasText: "Positive offsets" })).toContainText("+");
   await expect(page.getByText("Remaining movement across other segments in this decomposition", { exact: true })).toBeVisible();
@@ -282,6 +286,15 @@ test("segment-reliability data-quality issues surface row counts near the flagge
   await expect(evidenceCard).toContainText("Comparison rows");
   await expect(evidenceCard).toContainText("40");
   await expect(page.locator(".caveat-list")).toContainText("could not be independently verified as reliable");
+
+  // The target-affecting caution is surfaced early, above the conclusion --
+  // not only in the full data-quality section further down the page.
+  const alert = page.locator(".quality-alert");
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText("too few raw rows");
+  const alertBox = await alert.boundingBox();
+  const conclusionBox = await page.locator("#conclusion-title").boundingBox();
+  expect(alertBox.y).toBeLessThan(conclusionBox.y);
 });
 
 test("target-applicable robustness is descriptive and does not imply certainty", async ({ page }) => {
@@ -305,6 +318,8 @@ test("downstream data-quality limitation preserves the upstream leading conclusi
   await expect(page.getByRole("heading", { name: "Leading tested contributor", exact: true })).toBeVisible();
   await expect(page.getByText(/Downstream limitation: this issue does not invalidate/)).toBeVisible();
   await expect(page.locator(".quality-issue.downstream")).toBeVisible();
+  // A downstream-only issue does not target the selection, so no early banner.
+  await expect(page.locator(".quality-alert")).toHaveCount(0);
 });
 
 test("target data-quality abstention is rendered as an analytical result", async ({ page }) => {
@@ -315,6 +330,12 @@ test("target data-quality abstention is rendered as an analytical result", async
   await expect(page.getByRole("heading", { name: "Data-quality abstention" })).toBeVisible();
   await expect(page.locator(".quality-issue.target")).toContainText("This issue affects the selected target");
   await expect(page.getByRole("heading", { name: "Not ready" })).toBeVisible();
+  // Blocking severity renders the danger variant of the early banner, also above the conclusion.
+  const alert = page.locator(".quality-alert");
+  await expect(alert).toHaveClass(/danger/);
+  const alertBox = await alert.boundingBox();
+  const conclusionBox = await page.locator("#conclusion-title").boundingBox();
+  expect(alertBox.y).toBeLessThan(conclusionBox.y);
 });
 
 test("no-material-driver result remains inconclusive", async ({ page }) => {

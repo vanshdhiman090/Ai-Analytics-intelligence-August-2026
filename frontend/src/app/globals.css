@@ -270,6 +270,11 @@ a { color: var(--teal); }
 .caveat-list li { display: grid; grid-template-columns: minmax(170px, 0.5fr) minmax(0, 1.5fr); gap: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-subtle); }
 .caveat-list strong { color: var(--amber); font-size: 11px; }
 .caveat-list span { color: var(--muted); font-size: 12px; }
+.quality-alert { border-left: 4px solid var(--danger); }
+.quality-alert.warning { border-left-color: var(--amber); }
+.quality-alert-list { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.quality-alert-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border-radius: 8px; background: var(--danger-soft); color: var(--blocker-text); font-size: 12px; }
+.quality-alert.warning .quality-alert-list li { background: var(--amber-soft); color: var(--warning-text); }
 .quality-pass { margin: 16px 0 0; padding: 14px; border-left: 3px solid var(--teal); background: var(--teal-soft); color: var(--success-text); }
 .quality-list { display: grid; gap: 9px; margin-top: 17px; }
 .quality-issue { padding: 15px; border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: 10px; background: var(--danger-soft); }

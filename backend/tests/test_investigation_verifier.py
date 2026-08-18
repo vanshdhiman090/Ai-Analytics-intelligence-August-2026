@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import patch
 
 import pandas as pd
@@ -135,7 +136,7 @@ def test_omitted_and_duplicate_challenges_are_completed_once(tmp_path):
 
     result = verify_investigation(state, request, generator=duplicate)
     types = [item.challenge_type for item in result.verification_records]
-    assert len(types) == len(set(types)) == 4
+    assert len(types) == len(set(types)) == 5
     assert result.challenge_planning_record.planner_mode == "llm_with_fallback"
     assert any(
         item.rejection_reason == "duplicate_challenge"
@@ -176,6 +177,26 @@ def test_no_material_challenge_never_upgrades_weak_original_evidence(tmp_path):
     result = verify_investigation(weak, request, generator=_challenge_planner("valid"))
     assert result.verification_status == "robust_with_caveats"
     assert result.verification_evidence_strength == "weak"
+
+
+def test_provider_failure_logs_warning_with_structured_fields(tmp_path, caplog):
+    state, request = _provisional_state(tmp_path)
+
+    def failing_generator(*_args, **_kwargs):
+        raise RuntimeError("provider unavailable")
+
+    with caplog.at_level(logging.WARNING, logger="app.services.investigation_verifier"):
+        planning = plan_challenges(
+            request, state, _build_target(state), generator=failing_generator
+        )
+
+    assert planning.fallback_reason == "provider_failure"
+    records = [item for item in caplog.records if item.name == "app.services.investigation_verifier"]
+    assert len(records) == 1
+    assert records[0].levelname == "WARNING"
+    assert records[0].investigation_id == request.investigation_id
+    assert records[0].fallback_reason == "provider_failure"
+    assert records[0].rejection_reason == "provider_failure"
 
 
 def test_milestone_5_production_path_benchmark():

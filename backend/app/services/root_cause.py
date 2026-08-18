@@ -586,6 +586,33 @@ def _normalized_dimension_values(values: pd.Series) -> pd.Series:
     return as_text.mask(missing, "__MISSING__")
 
 
+def _segment_presence_counts(
+    raw_scope: pd.DataFrame, dimension: str, periods: tuple[str, str]
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Per-segment/per-period raw row counts and null-metric row counts.
+
+    Computed from raw_scope BEFORE any notna() filter, so a segment that is
+    genuinely absent from a period (row count 0) stays distinguishable from
+    one whose rows exist but had no usable metric value (row count > 0,
+    null count == row count) -- a distinction the notna()-filtered pivot
+    used for baseline_value/comparison_value cannot make once it collapses
+    both to fill_value=0.
+    """
+    period_rows = raw_scope[raw_scope["_investigation_period"].isin(periods)].copy()
+    period_rows["_investigation_segment"] = _normalized_dimension_values(period_rows[dimension])
+    grouped = period_rows.groupby(["_investigation_segment", "_investigation_period"], dropna=False)["_investigation_metric"]
+    row_counts = grouped.size().unstack(fill_value=0)
+    null_counts = grouped.apply(lambda values: int(values.isna().sum())).unstack(fill_value=0)
+    return row_counts, null_counts
+
+
+def _segment_presence_lookup(
+    counts: pd.DataFrame, index: pd.Index, periods: tuple[str, str]
+) -> pd.DataFrame:
+    """Align a presence-counts pivot to the main contribution pivot's segment index/period columns."""
+    return counts.reindex(index=index, columns=list(periods), fill_value=0)
+
+
 def _safe_period_frame(
     frame: pd.DataFrame, request: SingleLevelInvestigationRequest
 ) -> tuple[pd.DataFrame, list[InvestigationHealthCheck], list[InvestigationEvidence]]:
@@ -678,6 +705,9 @@ def run_single_level_investigation(
         partition = selected.copy()
         partition["_investigation_segment"] = _normalized_dimension_values(partition[dimension])
         pivot = partition.groupby(["_investigation_segment", "_investigation_period"], dropna=False)["_investigation_metric"].sum().unstack(fill_value=0)
+        raw_row_counts, raw_null_counts = _segment_presence_counts(prepared, dimension, (request.baseline_period, request.comparison_period))
+        raw_row_counts = _segment_presence_lookup(raw_row_counts, pivot.index, (request.baseline_period, request.comparison_period))
+        raw_null_counts = _segment_presence_lookup(raw_null_counts, pivot.index, (request.baseline_period, request.comparison_period))
         contributions: list[SegmentContribution] = []
         for segment, row in pivot.iterrows():
             before, after = float(row.get(request.baseline_period, 0)), float(row.get(request.comparison_period, 0))
@@ -685,7 +715,19 @@ def run_single_level_investigation(
             share = change / net * 100
             aligned = change * net > 0
             direction = "with_incident" if aligned else "positive_offset" if change * net < 0 else "neutral"
-            item = SegmentContribution(dimension=dimension, segment="<missing>" if pd.isna(segment) else str(segment), baseline_value=before, comparison_value=after, signed_change=change, contribution_to_net_change_pct=share, direction=direction)
+            item = SegmentContribution(
+                dimension=dimension,
+                segment="<missing>" if pd.isna(segment) else str(segment),
+                baseline_value=before,
+                comparison_value=after,
+                signed_change=change,
+                contribution_to_net_change_pct=share,
+                direction=direction,
+                baseline_row_count=int(raw_row_counts.loc[segment, request.baseline_period]),
+                comparison_row_count=int(raw_row_counts.loc[segment, request.comparison_period]),
+                baseline_null_metric_row_count=int(raw_null_counts.loc[segment, request.baseline_period]),
+                comparison_null_metric_row_count=int(raw_null_counts.loc[segment, request.comparison_period]),
+            )
             contributions.append(item)
             if aligned:
                 candidates.append((item, dimension, f"IE{len(evidence) + 1}"))
@@ -773,6 +815,9 @@ def _scoped_dimension_tests(
         partition = valid.copy()
         partition["_investigation_segment"] = _normalized_dimension_values(partition[dimension])
         pivot = partition.groupby(["_investigation_segment", "_investigation_period"], dropna=False)["_investigation_metric"].sum().unstack(fill_value=0)
+        raw_row_counts, raw_null_counts = _segment_presence_counts(scope, dimension, (request.baseline_period, request.comparison_period))
+        raw_row_counts = _segment_presence_lookup(raw_row_counts, pivot.index, (request.baseline_period, request.comparison_period))
+        raw_null_counts = _segment_presence_lookup(raw_null_counts, pivot.index, (request.baseline_period, request.comparison_period))
         contributions: list[SegmentContribution] = []
         for segment, row in pivot.iterrows():
             before = float(row.get(request.baseline_period, 0.0))
@@ -780,7 +825,19 @@ def _scoped_dimension_tests(
             change = after - before
             local_share = change / parent_movement * 100
             direction = "with_incident" if change * parent_movement > 0 else "positive_offset" if change * parent_movement < 0 else "neutral"
-            item = SegmentContribution(dimension=dimension, segment=str(segment), baseline_value=before, comparison_value=after, signed_change=change, contribution_to_net_change_pct=local_share, direction=direction)
+            item = SegmentContribution(
+                dimension=dimension,
+                segment=str(segment),
+                baseline_value=before,
+                comparison_value=after,
+                signed_change=change,
+                contribution_to_net_change_pct=local_share,
+                direction=direction,
+                baseline_row_count=int(raw_row_counts.loc[segment, request.baseline_period]),
+                comparison_row_count=int(raw_row_counts.loc[segment, request.comparison_period]),
+                baseline_null_metric_row_count=int(raw_null_counts.loc[segment, request.baseline_period]),
+                comparison_null_metric_row_count=int(raw_null_counts.loc[segment, request.comparison_period]),
+            )
             contributions.append(item)
             if direction == "with_incident":
                 aligned.append(item)
@@ -933,7 +990,7 @@ def run_evidence_driven_investigation(
                 raise RuntimeError("A controller iteration must create exactly one dimension-test evidence record")
         return scope_tests, record
 
-    root_tests, _ = run_scope(prepared, (), request.candidate_dimensions, global_movement, "IN0")
+    root_tests, root_record = run_scope(prepared, (), request.candidate_dimensions, global_movement, "IN0")
     if len(root_tests) != len(request.candidate_dimensions) or any(not test.reconciles_to_kpi_change for test in root_tests):
         return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="inconclusive", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=_root_hypotheses(request.candidate_dimensions, root_tests), tests_executed=tuple(all_tests), evidence=tuple(evidence), stopping_reason="Controlled root scope did not achieve deterministic analytical sufficiency.", hypothesis_planning_records=tuple(planning_records), investigation_iterations=tuple(iterations))
     best, winner_test = _leading_contributor(root_tests, request.material_contribution_pct)
@@ -942,7 +999,7 @@ def run_evidence_driven_investigation(
         return InvestigationState(investigation_id=request.investigation_id, goal=request.goal, kpi=request.kpi, baseline_period=request.baseline_period, comparison_period=request.comparison_period, candidate_dimensions=request.candidate_dimensions, outcome="inconclusive", baseline_value=baseline, comparison_value=comparison, net_kpi_movement=global_movement, data_health=tuple(health), hypotheses=_root_hypotheses(request.candidate_dimensions, root_tests), tests_executed=tuple(all_tests), evidence=tuple(evidence), evidence_strength="insufficient", stopping_reason="No tested segment supplied a material aligned contribution.", investigation_path=(root_node,), hypothesis_planning_records=tuple(planning_records), investigation_iterations=tuple(iterations))
 
     path = [InvestigationFilter(dimension=best.dimension, segment=best.segment)]
-    nodes = [root_node, InvestigationPathNode(node_id="IN1", depth=1, parent_node_id="IN0", filter_path=tuple(path), selected_dimension=best.dimension, selected_segment=best.segment, parent_kpi_movement=global_movement, segment_movement=best.signed_change, local_contribution_pct=best.contribution_to_net_change_pct, global_contribution_pct=best.contribution_to_net_change_pct, remaining_dimensions=tuple(dimension for dimension in request.candidate_dimensions if dimension != best.dimension), evidence_ids=(winner_test.evidence_id,), evidence_strength=_investigation_strength(best.contribution_to_net_change_pct))]
+    nodes = [root_node, InvestigationPathNode(node_id="IN1", depth=1, parent_node_id="IN0", filter_path=tuple(path), planning_id=root_record.planning_id, selected_dimension=best.dimension, selected_segment=best.segment, parent_kpi_movement=global_movement, segment_movement=best.signed_change, local_contribution_pct=best.contribution_to_net_change_pct, global_contribution_pct=best.contribution_to_net_change_pct, remaining_dimensions=tuple(dimension for dimension in request.candidate_dimensions if dimension != best.dimension), evidence_ids=(winner_test.evidence_id,), evidence_strength=_investigation_strength(best.contribution_to_net_change_pct))]
     while True:
         node = nodes[-1]
         reason: str | None = None
@@ -967,7 +1024,7 @@ def run_evidence_driven_investigation(
         if min(len(baseline_rows), len(comparison_rows)) < request.minimum_rows_per_period_for_drill_down:
             nodes[-1] = node.model_copy(update={"data_health": scoped_health, "evidence_ids": tuple(dict.fromkeys((*node.evidence_ids, *health_ids))), "stopping_reason": "insufficient_rows"})
             break
-        scope_tests, _ = run_scope(scoped, tuple(path), node.remaining_dimensions, float(node.segment_movement), node.node_id)
+        scope_tests, scope_record = run_scope(scoped, tuple(path), node.remaining_dimensions, float(node.segment_movement), node.node_id)
         nodes[-1] = node.model_copy(update={"data_health": scoped_health, "tested_dimensions": tuple(test.dimension for test in scope_tests), "test_ids": tuple(test.test_id for test in scope_tests), "evidence_ids": tuple(dict.fromkeys((*node.evidence_ids, *health_ids, *(test.evidence_id for test in scope_tests))))})
         if len(scope_tests) != len(node.remaining_dimensions) or any(not test.reconciles_to_kpi_change for test in scope_tests):
             nodes[-1] = nodes[-1].model_copy(update={"stopping_reason": "reconciliation_failure"})
@@ -980,7 +1037,7 @@ def run_evidence_driven_investigation(
         path.append(InvestigationFilter(dimension=child.dimension, segment=child.segment))
         depth = node.depth + 1
         global_share = child.signed_change / global_movement * 100
-        nodes.append(InvestigationPathNode(node_id=f"IN{depth}", depth=depth, parent_node_id=node.node_id, filter_path=tuple(path), selected_dimension=child.dimension, selected_segment=child.segment, parent_kpi_movement=node.segment_movement, segment_movement=child.signed_change, local_contribution_pct=child.contribution_to_net_change_pct, global_contribution_pct=global_share, remaining_dimensions=tuple(dimension for dimension in node.remaining_dimensions if dimension != child.dimension), evidence_ids=(child_test.evidence_id,), evidence_strength=_investigation_strength(child.contribution_to_net_change_pct)))
+        nodes.append(InvestigationPathNode(node_id=f"IN{depth}", depth=depth, parent_node_id=node.node_id, filter_path=tuple(path), planning_id=scope_record.planning_id, selected_dimension=child.dimension, selected_segment=child.segment, parent_kpi_movement=node.segment_movement, segment_movement=child.signed_change, local_contribution_pct=child.contribution_to_net_change_pct, global_contribution_pct=global_share, remaining_dimensions=tuple(dimension for dimension in node.remaining_dimensions if dimension != child.dimension), evidence_ids=(child_test.evidence_id,), evidence_strength=_investigation_strength(child.contribution_to_net_change_pct)))
 
     if len(all_tests) > ceiling:
         raise RuntimeError("Controlled investigation exceeded its derived test ceiling")

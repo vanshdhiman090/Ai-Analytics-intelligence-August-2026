@@ -7,6 +7,7 @@ the target, performs every calculation, and assigns every robustness result.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import Callable
 
@@ -23,17 +24,21 @@ from app.domain.root_cause_contracts import (
     InvestigationState,
     PlannedChallenge,
     RejectedChallengeProposal,
+    SegmentContribution,
     SingleLevelInvestigationRequest,
     VerificationPolicyV1,
     VerificationRecord,
     VerificationTarget,
 )
+from app.domain.segment_labels import is_placeholder_segment_label
 from app.services.llm import generate_structured
 
+logger = logging.getLogger(__name__)
 
 DEFAULT_VERIFICATION_POLICY = VerificationPolicyV1()
 _CHALLENGE_ORDER: tuple[ChallengeType, ...] = (
     "data_quality",
+    "segment_reliability",
     "competing_driver",
     "leading_segment_remainder",
     "offset_cancellation",
@@ -43,6 +48,7 @@ _REASON_BY_CHALLENGE: dict[ChallengeType, ChallengeReasonCode] = {
     "leading_segment_remainder": "assess_leading_segment_coverage",
     "offset_cancellation": "assess_opposing_offsets",
     "data_quality": "assess_target_scope_health",
+    "segment_reliability": "assess_segment_reliability",
 }
 _NUMERIC_CLAIM = re.compile(r"(?:\d|[%€$£¥])")
 _CAUSAL_OR_CERTAINTY = re.compile(
@@ -79,6 +85,20 @@ def _leading_test(state: InvestigationState) -> DimensionContributionTest | None
     }
     candidates.sort(key=lambda item: (item.test_id not in path_test_ids, item.test_id))
     return candidates[0]
+
+
+def _leading_segment_contribution(state: InvestigationState) -> SegmentContribution | None:
+    test = _leading_test(state)
+    if test is None:
+        return None
+    return next(
+        (
+            item
+            for item in test.segment_contributions
+            if item.segment == state.leading_segment and item.direction == "with_incident"
+        ),
+        None,
+    )
 
 
 def _build_target(state: InvestigationState) -> VerificationTarget | None:
@@ -143,6 +163,7 @@ def applicable_challenges(
         available.add("leading_segment_remainder")
     if leading is not None:
         available.add("offset_cancellation")
+        available.add("segment_reliability")
     return tuple(item for item in _CHALLENGE_ORDER if item in available)
 
 
@@ -169,7 +190,8 @@ def challenge_planning_prompt(
         f"Applicable mandatory challenge types: {json.dumps(applicable)}\n"
         "Allowed challenge/reason pairs: competing_driver/compare_tested_decompositions; "
         "leading_segment_remainder/assess_leading_segment_coverage; "
-        "offset_cancellation/assess_opposing_offsets; data_quality/assess_target_scope_health."
+        "offset_cancellation/assess_opposing_offsets; data_quality/assess_target_scope_health; "
+        "segment_reliability/assess_segment_reliability."
     )
 
 
@@ -247,6 +269,18 @@ def plan_challenges(
                 challenge_type="<provider>", rejection_reason="provider_failure"
             )
         )
+        for item in rejected:
+            logger.warning(
+                "Challenge planning fell back to deterministic mode investigation_id=%s fallback_reason=%s rejection_reason=%s",
+                request.investigation_id,
+                fallback_reason,
+                item.rejection_reason,
+                extra={
+                    "investigation_id": request.investigation_id,
+                    "fallback_reason": fallback_reason,
+                    "rejection_reason": item.rejection_reason,
+                },
+            )
 
     planned: list[PlannedChallenge] = []
     included: set[ChallengeType] = set()
@@ -512,6 +546,145 @@ def _data_quality_record(
     )
 
 
+def _segment_reliability_record(
+    state: InvestigationState,
+    target: VerificationTarget,
+    verification_id: str,
+    policy: VerificationPolicyV1,
+) -> VerificationRecord:
+    """Judge whether the target segment's own raw data can be trusted.
+
+    Reads the Milestone A row-count fields on SegmentContribution -- never
+    recomputes them -- to distinguish genuine absence and null-derived
+    values from a real measured movement, none of which the fabricated
+    baseline_value/comparison_value=0 fallback can distinguish on its own.
+    """
+    leading_test = _leading_test(state)
+    segment = _leading_segment_contribution(state)
+    assert leading_test is not None and segment is not None
+    metrics: dict[str, float | int | str | None] = {
+        "baseline_row_count": segment.baseline_row_count,
+        "comparison_row_count": segment.comparison_row_count,
+        "baseline_null_metric_row_count": segment.baseline_null_metric_row_count,
+        "comparison_null_metric_row_count": segment.comparison_null_metric_row_count,
+    }
+    if (
+        segment.baseline_row_count > 0
+        and segment.baseline_null_metric_row_count == segment.baseline_row_count
+    ):
+        return VerificationRecord(
+            verification_id=verification_id,
+            verification_policy_version=policy.verification_policy_version,
+            challenge_type="segment_reliability",
+            target=target,
+            source_test_ids=(leading_test.test_id,),
+            source_evidence_ids=(leading_test.evidence_id,),
+            result="contradicts_leading",
+            materiality="blocking",
+            result_code="segment_baseline_unavailable",
+            metrics=metrics,
+            rationale=(
+                f"{target.target_dimension}={target.target_segment}'s baseline period has "
+                f"{segment.baseline_row_count} raw row(s), all with no usable metric value; "
+                "baseline is unavailable, not a measured change."
+            ),
+        )
+    if segment.baseline_row_count == 0 or segment.comparison_row_count == 0:
+        assert state.net_kpi_movement is not None
+        ratio = (
+            abs(segment.baseline_value) / abs(state.net_kpi_movement)
+            if state.net_kpi_movement
+            else 0.0
+        )
+        blocking = ratio >= policy.leading_segment_remainder_material_ratio
+        vanished = segment.comparison_row_count == 0
+        return VerificationRecord(
+            verification_id=verification_id,
+            verification_policy_version=policy.verification_policy_version,
+            challenge_type="segment_reliability",
+            target=target,
+            source_test_ids=(leading_test.test_id,),
+            source_evidence_ids=(leading_test.evidence_id,),
+            result="contradicts_leading",
+            materiality="blocking" if blocking else "caution",
+            result_code=(
+                "segment_structurally_absent_material"
+                if blocking
+                else "segment_structurally_absent_caution"
+            ),
+            metrics={**metrics, "baseline_to_net_movement_ratio": ratio},
+            rationale=(
+                f"{target.target_dimension}={target.target_segment} has raw rows in "
+                f"{'baseline only' if vanished else 'comparison only'} "
+                f"({segment.baseline_row_count} baseline / {segment.comparison_row_count} comparison); "
+                "this is a structural change -- absence, rename, or pipeline break -- not a measured decline."
+            ),
+        )
+    minimum = policy.minimum_segment_row_count
+    smallest = min(segment.baseline_row_count, segment.comparison_row_count)
+    if smallest < minimum:
+        return VerificationRecord(
+            verification_id=verification_id,
+            verification_policy_version=policy.verification_policy_version,
+            challenge_type="segment_reliability",
+            target=target,
+            source_test_ids=(leading_test.test_id,),
+            source_evidence_ids=(leading_test.evidence_id,),
+            result="contradicts_leading",
+            materiality="material",
+            result_code="insufficient_segment_sample",
+            metrics=metrics,
+            rationale=(
+                f"{target.target_dimension}={target.target_segment} has only {smallest} raw row(s) "
+                f"in its smaller period, below the minimum of {minimum} required for a reliable estimate."
+            ),
+        )
+    # Reached only when the segment's raw support is fine: the rows exist in
+    # both periods and the metric values are real. What can still be wrong is
+    # the *label*. A placeholder label ("Not Defined", "unknown", the engine's
+    # own __MISSING__ sentinel) names no business population, so it cannot
+    # carry a descriptive explanation even though its movement is genuinely
+    # measured -- and it stays in the arithmetic and the reconciliation
+    # untouched. Material, not blocking: the number is real, the story is not.
+    #
+    # Scope limit: verification builds exactly one target, the root-level
+    # leading segment (_build_target). A placeholder segment that only wins at
+    # depth 2+ is never this target and is therefore not caught here -- the
+    # known drill-down verification gap, not something this check closes.
+    if is_placeholder_segment_label(target.target_segment):
+        return VerificationRecord(
+            verification_id=verification_id,
+            verification_policy_version=policy.verification_policy_version,
+            challenge_type="segment_reliability",
+            target=target,
+            source_test_ids=(leading_test.test_id,),
+            source_evidence_ids=(leading_test.evidence_id,),
+            result="contradicts_leading",
+            materiality="material",
+            result_code="segment_label_not_interpretable",
+            metrics={**metrics, "target_segment_label": target.target_segment},
+            rationale=(
+                f"{target.target_dimension}={target.target_segment} is a missing-data "
+                "placeholder rather than a business category. Its movement is measured "
+                "and still counted in the decomposition, but it identifies no population "
+                "that a descriptive explanation could be about."
+            ),
+        )
+    return VerificationRecord(
+        verification_id=verification_id,
+        verification_policy_version=policy.verification_policy_version,
+        challenge_type="segment_reliability",
+        target=target,
+        source_test_ids=(leading_test.test_id,),
+        source_evidence_ids=(leading_test.evidence_id,),
+        result="supports_leading",
+        materiality="none",
+        result_code="segment_sample_sufficient",
+        metrics=metrics,
+        rationale="The target segment has sufficient raw row support in both periods with no structural absence or null baseline.",
+    )
+
+
 def _downgrade_strength(strength: str) -> str:
     return {
         "strong": "moderate",
@@ -523,7 +696,8 @@ def _downgrade_strength(strength: str) -> str:
 
 def _reassess(state: InvestigationState, records: tuple[VerificationRecord, ...]):
     if any(
-        item.challenge_type == "data_quality" and item.materiality == "blocking"
+        item.challenge_type in {"data_quality", "segment_reliability"}
+        and item.materiality == "blocking"
         for item in records
     ):
         return (
@@ -540,7 +714,13 @@ def _reassess(state: InvestigationState, records: tuple[VerificationRecord, ...]
             "A near-equal contributor exists in another tested decomposition; the provisional leader is not uniquely explanatory.",
         )
     if any(
-        item.result_code == "leading_segment_remainder_material" for item in records
+        item.result_code
+        in {
+            "leading_segment_remainder_material",
+            "insufficient_segment_sample",
+            "segment_label_not_interpretable",
+        }
+        for item in records
     ):
         return (
             "weakened",
@@ -603,6 +783,8 @@ def verify_investigation(
             record = _remainder_record(state, target, verification_id, policy)
         elif planned.challenge_type == "offset_cancellation":
             record = _offset_record(state, target, verification_id, policy)
+        elif planned.challenge_type == "segment_reliability":
+            record = _segment_reliability_record(state, target, verification_id, policy)
         else:
             record = _data_quality_record(state, target, verification_id, policy)
         records.append(record)

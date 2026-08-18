@@ -265,8 +265,14 @@ function ConfigurationForm({ dataset, form, errors, onChange, onToggleDimension,
                 <input type="checkbox" checked={selected.has(column.name)} disabled={!selected.has(column.name) && form.dimensions.length >= 12} onChange={() => onToggleDimension(column.name)} />
                 <span>
                   <strong>{titleize(column.name)}</strong>
-                  <small>{column.semantic_type} · {Number(column.unique_count || 0).toLocaleString()} unique · {column.null_pct || 0}% null</small>
+                  <small>
+                    {column.semantic_type} · {Number(column.unique_count || 0).toLocaleString()} unique · {column.null_pct || 0}% null
+                    {Boolean(column.placeholder_pct) && <> · {column.placeholder_pct}% placeholder values</>}
+                  </small>
                   {column.caution && <em>High cardinality or identifier-like — select only when analytically meaningful</em>}
+                  {Boolean(column.placeholder_pct) && (
+                    <em>Contains missing-data placeholders (e.g. &quot;Not Defined&quot;) — these will not support a descriptive explanation even if arithmetically leading</em>
+                  )}
                 </span>
               </label>
             ))}

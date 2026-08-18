@@ -40,6 +40,9 @@ class Settings:
     # Bounded public portfolio mode. The backend owns this boundary; the
     # browser flag only controls presentation and cannot enable ingestion.
     RECRUITER_DEMO_MODE: bool = _environment_bool("RECRUITER_DEMO_MODE")
+    # HMAC key for opaque anonymous guest cookies. Local development uses a
+    # process-local key; real guest ingestion must configure a durable secret.
+    GUEST_IDENTITY_SECRET: str = os.environ.get("GUEST_IDENTITY_SECRET", "").strip()
     # Comma-separated API keys for simple bearer auth. Empty = auth disabled (local dev).
     API_KEYS: set[str] = {
         k.strip()
@@ -78,6 +81,8 @@ class Settings:
             raise RuntimeError("DEPLOYMENT_MODE must be 'development', 'test', or 'controlled_pilot'.")
         if not isinstance(self.RECRUITER_DEMO_MODE, bool):
             raise RuntimeError("RECRUITER_DEMO_MODE must be a boolean value.")
+        if self.DEPLOYMENT_MODE == "controlled_pilot" and not self.RECRUITER_DEMO_MODE and len(self.GUEST_IDENTITY_SECRET) < 32:
+            raise RuntimeError("GUEST_IDENTITY_SECRET must contain at least 32 characters for controlled guest ingestion.")
         if self.LLM_PROVIDER != "gemini":
             raise RuntimeError("LLM_PROVIDER must be 'gemini'.")
         if self.CHECKPOINT_BACKEND not in {"postgres", "memory"}:

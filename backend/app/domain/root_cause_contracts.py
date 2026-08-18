@@ -76,12 +76,14 @@ ChallengeType = Literal[
     "leading_segment_remainder",
     "offset_cancellation",
     "data_quality",
+    "segment_reliability",
 ]
 ChallengeReasonCode = Literal[
     "compare_tested_decompositions",
     "assess_leading_segment_coverage",
     "assess_opposing_offsets",
     "assess_target_scope_health",
+    "assess_segment_reliability",
 ]
 ChallengeProposalSource = Literal["llm", "deterministic_fallback"]
 ChallengeProposalRejectionReason = Literal[
@@ -113,6 +115,12 @@ VerificationResultCode = Literal[
     "target_scope_quality_safe",
     "target_scope_quality_caution",
     "target_scope_quality_blocking",
+    "segment_sample_sufficient",
+    "insufficient_segment_sample",
+    "segment_structurally_absent_caution",
+    "segment_structurally_absent_material",
+    "segment_baseline_unavailable",
+    "segment_label_not_interpretable",
 ]
 VerificationRobustnessStatus = Literal[
     "not_run",
@@ -174,6 +182,7 @@ ConclusionCaveatCode = Literal[
     "verification_not_completed",
     "no_material_driver",
     "robustness_applies_to_upstream_scope_only",
+    "insufficient_segment_reliability",
 ]
 
 
@@ -484,6 +493,16 @@ class SegmentContribution(RCAContract):
     signed_change: float
     contribution_to_net_change_pct: float | None
     direction: Literal["with_incident", "positive_offset", "negative_pressure", "neutral"]
+    # Raw row presence per period, captured before the notna() filter and the
+    # unstack(fill_value=0) pivot collapse genuine absence, a null-derived
+    # value, and a genuine zero into the same 0. row_count == 0 means the
+    # segment had no raw rows in that period at all; null_metric_row_count
+    # == row_count (with row_count > 0) means every raw row existed but had
+    # no usable metric value. Data capture only -- not yet read anywhere.
+    baseline_row_count: int = Field(default=0, ge=0)
+    comparison_row_count: int = Field(default=0, ge=0)
+    baseline_null_metric_row_count: int = Field(default=0, ge=0)
+    comparison_null_metric_row_count: int = Field(default=0, ge=0)
 
 
 class DimensionContributionTest(RCAContract):
@@ -608,6 +627,12 @@ class VerificationPolicyV1(RCAContract):
     leading_segment_remainder_material_ratio: float = Field(default=0.50, ge=0.0)
     offset_caution_ratio: float = Field(default=0.10, ge=0.0)
     offset_material_ratio: float = Field(default=0.20, ge=0.0)
+    # Below this many raw rows in either period, the target segment's own
+    # baseline/comparison value is not a reliable estimate. Matches
+    # SingleLevelInvestigationRequest.minimum_rows_per_period_for_drill_down
+    # (also 5) -- the only other row-count threshold in this codebase --
+    # rather than inventing an unrelated number.
+    minimum_segment_row_count: int = Field(default=5, ge=1)
 
     @model_validator(mode="after")
     def caution_thresholds_precede_material_thresholds(self) -> "VerificationPolicyV1":
@@ -703,6 +728,10 @@ class InvestigationPathNode(RCAContract):
     depth: int = Field(ge=0)
     parent_node_id: str | None = Field(default=None, pattern=r"^IN\d+$")
     filter_path: tuple[InvestigationFilter, ...] = Field(default_factory=tuple)
+    # Explicit ID link (not positional) to the HypothesisPlanningRecord whose
+    # planning, in the PARENT scope, produced this node's selected_dimension.
+    # None on the root node, which has no selected_dimension to explain.
+    planning_id: str | None = Field(default=None, pattern=r"^IP\d+$")
     selected_dimension: str | None = None
     selected_segment: str | None = None
     parent_kpi_movement: float | None = None

@@ -30,6 +30,7 @@ async function request(path, options = {}) {
     response = await fetch(`${API_BASE}${path}`, {
       ...options,
       cache: "no-store",
+      credentials: "include",
       headers: headers(options.headers || {}),
     });
   } catch {

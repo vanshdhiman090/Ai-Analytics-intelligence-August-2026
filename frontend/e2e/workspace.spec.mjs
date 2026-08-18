@@ -95,7 +95,7 @@ function successResponse(overrides = {}) {
       { depth: 2, source_scope: [filter("country", "Germany")], target_scope: [filter("country", "Germany"), filter("device", "Mobile")], dimension: "device", segment: "Mobile", baseline_value: 33000, comparison_value: 24500, parent_movement: -11000, segment_movement: -8500, local_contribution_pct: 77.273, global_contribution_pct: 56.667, evidence_strength: "strong", evidence_refs: ["EV3"] },
       { depth: 3, source_scope: [filter("country", "Germany"), filter("device", "Mobile")], target_scope: [filter("country", "Germany"), filter("device", "Mobile"), filter("customer_type", "Returning")], dimension: "customer_type", segment: "Returning", baseline_value: 26000, comparison_value: 16500, parent_movement: -8500, segment_movement: -9500, local_contribution_pct: 111.765, global_contribution_pct: 63.333, evidence_strength: "strong", evidence_refs: ["EV4"] },
     ],
-    leading_contributor: { source_scope: [filter("country", "Germany"), filter("device", "Mobile")], target_scope: [filter("country", "Germany"), filter("device", "Mobile"), filter("customer_type", "Returning")], dimension: "customer_type", segment: "Returning", baseline_value: 26000, comparison_value: 16500, signed_change: -9500, local_contribution_pct: 111.765, global_contribution_pct: 63.333, evidence_strength: "strong", evidence_refs: ["EV4"] },
+    leading_contributor: { source_scope: [filter("country", "Germany"), filter("device", "Mobile")], target_scope: [filter("country", "Germany"), filter("device", "Mobile"), filter("customer_type", "Returning")], dimension: "customer_type", segment: "Returning", baseline_value: 26000, comparison_value: 16500, signed_change: -9500, local_contribution_pct: 111.765, global_contribution_pct: 63.333, evidence_strength: "strong", evidence_refs: ["EV4"], prioritization_rationale: "Returning customers in Germany's mobile segment carried a large baseline share, worth testing directly." },
     selected_decomposition: { source_scope: [filter("country", "Germany"), filter("device", "Mobile")], dimension: "customer_type", parent_movement: -8500, dimension_net_movement: -8500, leading_segment_movement: -9500, remaining_segment_movement: 1000, downward_pressure: -10500, positive_offsets: 2000, reconciliation_residual: 0, reconciles: true, evidence_refs: ["EV4"] },
     conclusion: { claim: "leading_tested_contributor", readiness: { status: "ready_with_caveats", reason: null }, robustness: { status: "not_verified", applies_to_selected_target: false }, terminal_status: "completed_with_caveats", caveats: ["material_offsets", "leading_segment_remainder", "robustness_applies_to_upstream_scope_only"], recommended_next_action: "review_large_offsets", evidence_refs: ["EV4"] },
     data_quality: { status: "pass", issues: [] },
@@ -216,14 +216,85 @@ test("single-dataset RCA flow submits the exact public request and renders signe
   expect(await globalPathDescription.evaluate((element) => getComputedStyle(element).display)).toBe("block");
   await expect(page.getByRole("heading", { name: "Leading tested contributor", exact: true })).toBeVisible();
   await expect(page.locator("label.dimension-option", { hasText: "Constant Field" })).toHaveCount(0);
+  // No target-affecting data-quality issue was returned: the early warning banner is a no-op.
+  await expect(page.locator(".quality-alert")).toHaveCount(0);
+  await expect(page.locator(".leader-metrics dt", { hasText: "Contribution magnitude" })).toBeVisible();
+  await expect(page.locator(".path-metrics dt", { hasText: "Contribution magnitude" })).toHaveCount(3);
   await expect(page.getByText("+111.8%", { exact: true }).first()).toBeVisible();
   await expect(page.locator(".decomposition-grid div", { hasText: "Positive offsets" })).toContainText("+");
   await expect(page.getByText("Remaining movement across other segments in this decomposition", { exact: true })).toBeVisible();
   await expect(page.locator(".decomposition-grid dt", { hasText: "Reconciliation tie-out" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Not verified at the selected target" })).toBeVisible();
   await expect(page.locator(".incident-change")).toContainText("-15%");
+  await expect(page.locator(".leader-card")).toContainText("Why this was checked");
+  await expect(page.locator(".leader-card")).toContainText("written before any results were known");
+  await expect(page.locator(".leader-card")).toContainText("Returning customers in Germany's mobile segment carried a large baseline share, worth testing directly.");
   assertSemanticSafety(await page.locator("body").innerText());
   expect(pageErrors).toEqual([]);
+});
+
+test("the setup wizard surfaces placeholder-label prevalence next to null prevalence", async ({ page }) => {
+  const base = datasetResponse();
+  const withPlaceholderColumn = {
+    ...base,
+    profile: {
+      ...base.profile,
+      columns: {
+        ...base.profile.columns,
+        country: profileColumn("country", "categorical", 3, { placeholder_count: 3, placeholder_pct: 30 }),
+      },
+    },
+  };
+  await mockApi(page, { datasetResponses: [withPlaceholderColumn] });
+  await page.goto("/");
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.getByRole("heading", { name: "Define the additive KPI" })).toBeVisible();
+  const countryOption = page.locator("label.dimension-option", { hasText: "Country" });
+  await expect(countryOption).toContainText("30% placeholder values");
+  await expect(countryOption).toContainText("missing-data placeholders");
+  const deviceOption = page.locator("label.dimension-option", { hasText: "Device" });
+  await expect(deviceOption).not.toContainText("placeholder values");
+});
+
+test("prioritization rationale renders nothing when the LLM did not supply it", async ({ page }) => {
+  const base = successResponse();
+  const result = successResponse({
+    leading_contributor: { ...base.leading_contributor, prioritization_rationale: null },
+  });
+  await mockApi(page, { rcaResponse: result });
+  await uploadAndConfigure(page);
+  await runInvestigation(page);
+  await expect(page.getByRole("heading", { name: "Leading tested contributor", exact: true })).toBeVisible();
+  await expect(page.locator(".leader-card")).not.toContainText("Why this was checked");
+  await expect(page.locator(".leader-card")).not.toContainText("null");
+});
+
+test("segment-reliability data-quality issues surface row counts near the flagged evidence", async ({ page }) => {
+  const base = successResponse();
+  const result = successResponse({
+    conclusion: { ...base.conclusion, caveats: [...base.conclusion.caveats, "insufficient_segment_reliability"] },
+    data_quality: { status: "caution", issues: [{ code: "insufficient_segment_sample", severity: "caution", source_scope: [filter("country", "Germany"), filter("device", "Mobile"), filter("customer_type", "Returning")], affects_selected_target: true, evidence_refs: ["EV5"] }] },
+    supporting_evidence: [...base.supporting_evidence, { evidence_ref: "EV5", kind: "data_quality", source_scope: [filter("country", "Germany"), filter("device", "Mobile"), filter("customer_type", "Returning")], target_scope: [], dimension: null, segment: null, baseline_value: null, comparison_value: null, signed_change: null, local_contribution_pct: null, global_contribution_pct: null, quality_code: "insufficient_segment_sample", baseline_row_count: 4, comparison_row_count: 40 }],
+  });
+  await mockApi(page, { rcaResponse: result });
+  await uploadAndConfigure(page);
+  await runInvestigation(page);
+  const evidenceCard = page.locator("#evidence-EV5");
+  await expect(evidenceCard).toContainText("too few raw rows");
+  await expect(evidenceCard).toContainText("Baseline rows");
+  await expect(evidenceCard).toContainText("4");
+  await expect(evidenceCard).toContainText("Comparison rows");
+  await expect(evidenceCard).toContainText("40");
+  await expect(page.locator(".caveat-list")).toContainText("could not be independently verified as reliable");
+
+  // The target-affecting caution is surfaced early, above the conclusion --
+  // not only in the full data-quality section further down the page.
+  const alert = page.locator(".quality-alert");
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText("too few raw rows");
+  const alertBox = await alert.boundingBox();
+  const conclusionBox = await page.locator("#conclusion-title").boundingBox();
+  expect(alertBox.y).toBeLessThan(conclusionBox.y);
 });
 
 test("target-applicable robustness is descriptive and does not imply certainty", async ({ page }) => {
@@ -247,6 +318,8 @@ test("downstream data-quality limitation preserves the upstream leading conclusi
   await expect(page.getByRole("heading", { name: "Leading tested contributor", exact: true })).toBeVisible();
   await expect(page.getByText(/Downstream limitation: this issue does not invalidate/)).toBeVisible();
   await expect(page.locator(".quality-issue.downstream")).toBeVisible();
+  // A downstream-only issue does not target the selection, so no early banner.
+  await expect(page.locator(".quality-alert")).toHaveCount(0);
 });
 
 test("target data-quality abstention is rendered as an analytical result", async ({ page }) => {
@@ -257,6 +330,12 @@ test("target data-quality abstention is rendered as an analytical result", async
   await expect(page.getByRole("heading", { name: "Data-quality abstention" })).toBeVisible();
   await expect(page.locator(".quality-issue.target")).toContainText("This issue affects the selected target");
   await expect(page.getByRole("heading", { name: "Not ready" })).toBeVisible();
+  // Blocking severity renders the danger variant of the early banner, also above the conclusion.
+  const alert = page.locator(".quality-alert");
+  await expect(alert).toHaveClass(/danger/);
+  const alertBox = await alert.boundingBox();
+  const conclusionBox = await page.locator("#conclusion-title").boundingBox();
+  expect(alertBox.y).toBeLessThan(conclusionBox.y);
 });
 
 test("no-material-driver result remains inconclusive", async ({ page }) => {

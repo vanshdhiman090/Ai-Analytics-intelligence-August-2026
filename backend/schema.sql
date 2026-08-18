@@ -26,6 +26,7 @@ CREATE TABLE sessions (
 CREATE TABLE datasets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
+    guest_owner_id UUID,
     file_path TEXT NOT NULL,
     original_filename TEXT,
     content_type TEXT,
@@ -95,6 +96,7 @@ CREATE TABLE document_revisions (
 );
 
 CREATE INDEX idx_datasets_session ON datasets(session_id);
+CREATE INDEX idx_datasets_guest_owner ON datasets(guest_owner_id);
 CREATE INDEX idx_datasets_sha256 ON datasets(sha256);
 CREATE INDEX idx_checkpoints_session ON checkpoints(session_id);
 CREATE INDEX idx_agent_actions_session ON agent_actions(session_id);

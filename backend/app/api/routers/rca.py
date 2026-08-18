@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.orm import Session
 
-from app.api.auth import require_api_key
+from app.api.auth import GuestPrincipal, require_api_key, require_guest_principal
 from app.api.rca_contracts import (
     RCAErrorBodyV1,
     RCAErrorFieldV1,
@@ -30,6 +30,7 @@ from app.services.rca_api import (
     load_governed_dataset,
 )
 from app.services.dataset_lifecycle import dataset_in_use
+from app.services.datasets import owned_dataset_query
 
 
 logger = logging.getLogger(__name__)
@@ -136,11 +137,14 @@ router = APIRouter(
 )
 
 
-def get_rca_dataset_resolver(db: Session = Depends(get_db)) -> DatasetRecordResolver:
+def get_rca_dataset_resolver(
+    db: Session = Depends(get_db),
+    guest: GuestPrincipal = Depends(require_guest_principal),
+) -> DatasetRecordResolver:
     """Return a request-scoped lookup that can be replaced in HTTP tests."""
 
     def resolve(dataset_id: UUID) -> Dataset:
-        dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        dataset = owned_dataset_query(db, guest).filter(Dataset.id == dataset_id).first()
         if dataset is None:
             raise RCAAPIServiceError(
                 status_code=404,
@@ -171,4 +175,14 @@ def create_rca_investigation(
     with dataset_in_use(body.dataset_id):
         dataset = resolve_dataset(body.dataset_id)
         frame = load_governed_dataset(dataset, settings.DATA_DIR)
-        return execute_rca_request(frame, body)
+        response = execute_rca_request(frame, body)
+        logger.info(
+            "RCA investigation completed request_id=%s investigation_id=%s",
+            _request_id(request),
+            response.investigation_id,
+            extra={
+                "request_id": _request_id(request),
+                "investigation_id": response.investigation_id,
+            },
+        )
+        return response

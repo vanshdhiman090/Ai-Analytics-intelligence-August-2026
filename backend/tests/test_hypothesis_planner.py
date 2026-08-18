@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 
 from app.agent.subagents.root_cause_agent import RootCauseAgent
@@ -102,3 +104,24 @@ def test_provider_failure_falls_back_and_root_cause_agent_still_completes(tmp_pa
     assert result["outcome"] == "strongest_supported_driver"
     assert record["planner_mode"] == "deterministic_fallback"
     assert record["fallback_reason"] == "provider_failure"
+
+
+def test_provider_failure_logs_warning_with_structured_fields(caplog):
+    def failing_generator(*_args, **_kwargs):
+        raise RuntimeError("provider unavailable")
+
+    with caplog.at_level(logging.WARNING, logger="app.services.hypothesis_planner"):
+        plan_hypotheses(
+            request(),
+            schema=(),
+            allowed_dimensions=("country", "device"),
+            planning_id=1,
+            generator=failing_generator,
+        )
+
+    records = [item for item in caplog.records if item.name == "app.services.hypothesis_planner"]
+    assert len(records) == 1
+    assert records[0].levelname == "WARNING"
+    assert records[0].investigation_id == "planner-test"
+    assert records[0].planner_mode == "deterministic_fallback"
+    assert records[0].fallback_reason == "provider_failure"

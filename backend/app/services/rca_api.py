@@ -178,6 +178,35 @@ def _find_test_and_segment(
     )
 
 
+def _prioritization_rationale(
+    state: InvestigationState, target: InvestigationPathNode
+) -> str | None:
+    """Resolve the LLM's pre-test rationale for target's selected_dimension.
+
+    Looks up state.hypothesis_planning_records by explicit planning_id
+    equality (never by list position or call order), then requires the
+    matching proposal within that record to be the LLM's own
+    (source == "llm"). Null in every other case -- provider failure, the
+    LLM never proposing this dimension, or deterministic_fallback having
+    supplied it -- with no synthesized substitute text.
+    """
+    if target.planning_id is None or target.selected_dimension is None:
+        return None
+    record = next(
+        (item for item in state.hypothesis_planning_records if item.planning_id == target.planning_id),
+        None,
+    )
+    if record is None:
+        return None
+    proposal = next(
+        (item for item in record.validated_proposals if item.target_dimension == target.selected_dimension),
+        None,
+    )
+    if proposal is None or proposal.source != "llm":
+        return None
+    return proposal.brief_reason
+
+
 def _path_projection(
     state: InvestigationState,
     conclusion: InvestigationConclusion,
@@ -284,6 +313,7 @@ def _path_projection(
         global_contribution_pct=target.global_contribution_pct,
         evidence_strength=target.evidence_strength,
         evidence_refs=(reference,),
+        prioritization_rationale=_prioritization_rationale(state, target),
     )
     decomposition = RCATargetDecompositionV1(
         source_scope=source_scope,
@@ -310,6 +340,13 @@ _QUALITY_CODE_BY_NAME = {
     "Scoped comparison row coverage": "comparison_coverage_incomplete",
     "Comparison metric completeness": "metric_completeness_failed",
     "Scoped comparison metric completeness": "metric_completeness_failed",
+}
+_SEGMENT_RELIABILITY_CODE_BY_RESULT_CODE = {
+    "insufficient_segment_sample": "insufficient_segment_sample",
+    "segment_structurally_absent_caution": "segment_structurally_absent",
+    "segment_structurally_absent_material": "segment_structurally_absent",
+    "segment_baseline_unavailable": "segment_baseline_unavailable",
+    "segment_label_not_interpretable": "segment_label_not_interpretable",
 }
 
 
@@ -362,6 +399,33 @@ def _quality_projection(
                     evidence_refs=(reference,),
                 )
             )
+
+    for record in state.verification_records:
+        if record.challenge_type != "segment_reliability":
+            continue
+        code = _SEGMENT_RELIABILITY_CODE_BY_RESULT_CODE.get(record.result_code)
+        if code is None:
+            continue
+        scope = _public_scope(record.target.filter_path)
+        affects = target_id is None or record.target.scope_node_id in path_ids
+        reference = evidence.add(
+            f"segment-reliability:{record.verification_id}",
+            kind="data_quality",
+            source_scope=scope,
+            target_scope=scope,
+            quality_code=code,
+            baseline_row_count=record.metrics.get("baseline_row_count"),
+            comparison_row_count=record.metrics.get("comparison_row_count"),
+        )
+        issues.append(
+            RCADataQualityIssueV1(
+                code=code,
+                severity="blocking" if record.materiality == "blocking" else "caution",
+                source_scope=scope,
+                affects_selected_target=affects,
+                evidence_refs=(reference,),
+            )
+        )
 
     for stop in conclusion.low_level_stops:
         if stop.stopping_reason != "insufficient_rows":

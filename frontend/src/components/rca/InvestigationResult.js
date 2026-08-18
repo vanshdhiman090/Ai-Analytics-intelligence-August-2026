@@ -44,6 +44,36 @@ function KpiIncident({ movement }) {
   );
 }
 
+// A condensed early warning for issues that affect the selected target,
+// so a skimming reader sees the caveat before the confident-sounding
+// headline below. The full issue detail (including downstream-only
+// issues) stays exactly where it was, in the DataQuality audit-trail
+// section further down the page — this never replaces that section.
+function TargetDataQualityAlert({ dataQuality }) {
+  const issues = (dataQuality?.issues || []).filter((issue) => issue.affects_selected_target);
+  if (!issues.length) return null;
+  const blocking = issues.some((issue) => issue.severity === "blocking");
+  return (
+    <section className={`result-section quality-alert ${blocking ? "danger" : "warning"}`} aria-labelledby="quality-alert-title">
+      <div className="section-heading-row">
+        <div>
+          <p className="eyebrow">Before the conclusion</p>
+          <h2 id="quality-alert-title">{blocking ? "A data-quality issue affects this target" : "A data-quality caution affects this target"}</h2>
+        </div>
+        <span className={`status-pill ${blocking ? "danger" : "warning"}`}>{titleize(dataQuality.status)}</span>
+      </div>
+      <ul className="quality-alert-list">
+        {issues.map((issue, index) => (
+          <li key={`${issue.code}-${index}`}>
+            <span>{QUALITY_LABELS[issue.code] || titleize(issue.code)}</span>
+            <EvidenceLinks refs={issue.evidence_refs} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ConclusionPanel({ result }) {
   const { conclusion, leading_contributor: leading, kpi_movement: movement } = result;
   return (
@@ -55,12 +85,15 @@ function ConclusionPanel({ result }) {
             <span>Leading tested contributor</span>
             <h3>{titleize(leading.dimension)} · {leading.segment}</h3>
             <p>{formatScope(leading.target_scope)}</p>
+            {leading.prioritization_rationale && (
+              <p><strong>Why this was checked</strong> — the model's reason for testing this dimension, written before any results were known: “{leading.prioritization_rationale}”</p>
+            )}
           </div>
           <dl className="leader-metrics">
             <div><dt>Signed movement</dt><dd>{formatValue(leading.signed_change, movement.unit, { signed: true })}</dd></div>
             <div><dt>Share of parent</dt><dd>{formatPercent(leading.local_contribution_pct)}</dd></div>
             <div><dt>Share of total</dt><dd>{formatPercent(leading.global_contribution_pct)}</dd></div>
-            <div><dt>Evidence strength</dt><dd>{titleize(leading.evidence_strength)}</dd></div>
+            <div><dt>Contribution magnitude</dt><dd>{titleize(leading.evidence_strength)}</dd></div>
           </dl>
           <EvidenceLinks refs={leading.evidence_refs} />
         </div>
@@ -165,6 +198,7 @@ export default function InvestigationResult({ result, onRevise, onNew }) {
       </div>
       <KpiIncident movement={result.kpi_movement} />
       <InvestigationPath steps={result.investigation_path} unit={result.kpi_movement.unit} />
+      <TargetDataQualityAlert dataQuality={result.data_quality} />
       <ConclusionPanel result={result} />
       <TargetDecomposition decomposition={result.selected_decomposition} unit={result.kpi_movement.unit} />
       <StatusSummary conclusion={result.conclusion} />

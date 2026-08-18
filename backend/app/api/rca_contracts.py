@@ -61,6 +61,7 @@ RCACaveatCodeV1 = Literal[
     "verification_not_completed",
     "no_material_driver",
     "robustness_applies_to_upstream_scope_only",
+    "insufficient_segment_reliability",
 ]
 RCANextActionV1 = Literal[
     "none_required",
@@ -81,6 +82,10 @@ RCADataQualityCodeV1 = Literal[
     "metric_completeness_failed",
     "insufficient_scope_rows",
     "other_bounded_quality_issue",
+    "insufficient_segment_sample",
+    "segment_structurally_absent",
+    "segment_baseline_unavailable",
+    "segment_label_not_interpretable",
 ]
 
 
@@ -179,6 +184,14 @@ class RCALeadingContributorV1(RCAAPIModel):
     global_contribution_pct: float | None = None
     evidence_strength: RCAEvidenceStrengthV1
     evidence_refs: tuple[str, ...] = Field(min_length=1)
+    # The LLM's own text for why this dimension was worth checking, written
+    # BEFORE any test ran against it. It is planning input, not a finding —
+    # never a post-hoc justification for why this is the answer. Populated
+    # only when the LLM itself proposed this exact winning dimension; null
+    # (never a synthesized substitute) whenever the LLM failed, never
+    # proposed this dimension, or the winner came from deterministic
+    # fallback.
+    prioritization_rationale: str | None = Field(default=None, max_length=180)
 
 
 class RCATargetDecompositionV1(RCAAPIModel):
@@ -249,6 +262,12 @@ class RCAEvidenceV1(RCAAPIModel):
     local_contribution_pct: float | None = None
     global_contribution_pct: float | None = None
     quality_code: RCADataQualityCodeV1 | None = None
+    # Raw row counts backing a segment-reliability data-quality issue (see
+    # RCADataQualityCodeV1's insufficient_segment_sample /
+    # segment_structurally_absent / segment_baseline_unavailable /
+    # segment_label_not_interpretable). Null for every other evidence kind.
+    baseline_row_count: int | None = None
+    comparison_row_count: int | None = None
 
 
 class RCAInvestigationResponseV1(RCAAPIModel):

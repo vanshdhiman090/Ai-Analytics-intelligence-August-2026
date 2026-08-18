@@ -30,6 +30,7 @@ from app.domain.root_cause_contracts import (
     VerificationRecord,
     VerificationTarget,
 )
+from app.domain.segment_labels import is_placeholder_segment_label
 from app.services.llm import generate_structured
 
 logger = logging.getLogger(__name__)
@@ -638,6 +639,37 @@ def _segment_reliability_record(
                 f"in its smaller period, below the minimum of {minimum} required for a reliable estimate."
             ),
         )
+    # Reached only when the segment's raw support is fine: the rows exist in
+    # both periods and the metric values are real. What can still be wrong is
+    # the *label*. A placeholder label ("Not Defined", "unknown", the engine's
+    # own __MISSING__ sentinel) names no business population, so it cannot
+    # carry a descriptive explanation even though its movement is genuinely
+    # measured -- and it stays in the arithmetic and the reconciliation
+    # untouched. Material, not blocking: the number is real, the story is not.
+    #
+    # Scope limit: verification builds exactly one target, the root-level
+    # leading segment (_build_target). A placeholder segment that only wins at
+    # depth 2+ is never this target and is therefore not caught here -- the
+    # known drill-down verification gap, not something this check closes.
+    if is_placeholder_segment_label(target.target_segment):
+        return VerificationRecord(
+            verification_id=verification_id,
+            verification_policy_version=policy.verification_policy_version,
+            challenge_type="segment_reliability",
+            target=target,
+            source_test_ids=(leading_test.test_id,),
+            source_evidence_ids=(leading_test.evidence_id,),
+            result="contradicts_leading",
+            materiality="material",
+            result_code="segment_label_not_interpretable",
+            metrics={**metrics, "target_segment_label": target.target_segment},
+            rationale=(
+                f"{target.target_dimension}={target.target_segment} is a missing-data "
+                "placeholder rather than a business category. Its movement is measured "
+                "and still counted in the decomposition, but it identifies no population "
+                "that a descriptive explanation could be about."
+            ),
+        )
     return VerificationRecord(
         verification_id=verification_id,
         verification_policy_version=policy.verification_policy_version,
@@ -683,7 +715,11 @@ def _reassess(state: InvestigationState, records: tuple[VerificationRecord, ...]
         )
     if any(
         item.result_code
-        in {"leading_segment_remainder_material", "insufficient_segment_sample"}
+        in {
+            "leading_segment_remainder_material",
+            "insufficient_segment_sample",
+            "segment_label_not_interpretable",
+        }
         for item in records
     ):
         return (

@@ -229,6 +229,29 @@ test("single-dataset RCA flow submits the exact public request and renders signe
   expect(pageErrors).toEqual([]);
 });
 
+test("the setup wizard surfaces placeholder-label prevalence next to null prevalence", async ({ page }) => {
+  const base = datasetResponse();
+  const withPlaceholderColumn = {
+    ...base,
+    profile: {
+      ...base.profile,
+      columns: {
+        ...base.profile.columns,
+        country: profileColumn("country", "categorical", 3, { placeholder_count: 3, placeholder_pct: 30 }),
+      },
+    },
+  };
+  await mockApi(page, { datasetResponses: [withPlaceholderColumn] });
+  await page.goto("/");
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.getByRole("heading", { name: "Define the additive KPI" })).toBeVisible();
+  const countryOption = page.locator("label.dimension-option", { hasText: "Country" });
+  await expect(countryOption).toContainText("30% placeholder values");
+  await expect(countryOption).toContainText("missing-data placeholders");
+  const deviceOption = page.locator("label.dimension-option", { hasText: "Device" });
+  await expect(deviceOption).not.toContainText("placeholder values");
+});
+
 test("prioritization rationale renders nothing when the LLM did not supply it", async ({ page }) => {
   const base = successResponse();
   const result = successResponse({

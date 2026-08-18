@@ -120,6 +120,7 @@ VerificationResultCode = Literal[
     "segment_structurally_absent_caution",
     "segment_structurally_absent_material",
     "segment_baseline_unavailable",
+    "segment_label_not_interpretable",
 ]
 VerificationRobustnessStatus = Literal[
     "not_run",

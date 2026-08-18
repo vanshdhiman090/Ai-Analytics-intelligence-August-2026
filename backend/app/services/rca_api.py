@@ -346,6 +346,7 @@ _SEGMENT_RELIABILITY_CODE_BY_RESULT_CODE = {
     "segment_structurally_absent_caution": "segment_structurally_absent",
     "segment_structurally_absent_material": "segment_structurally_absent",
     "segment_baseline_unavailable": "segment_baseline_unavailable",
+    "segment_label_not_interpretable": "segment_label_not_interpretable",
 }
 
 

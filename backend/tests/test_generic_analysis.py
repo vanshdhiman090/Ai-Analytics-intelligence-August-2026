@@ -28,6 +28,20 @@ def test_profile_is_dataset_aware():
     assert profile["columns"]["revenue"]["semantic_type"] == "numeric"
 
 
+def test_profile_reports_placeholder_pct_separately_from_null_pct():
+    frame = pd.DataFrame(
+        {
+            "region": ["North"] * 7 + ["Not Defined"] * 3,
+        }
+    )
+    profile = profile_dataframe(frame)
+    column = profile["columns"]["region"]
+    assert column["null_count"] == 0
+    assert column["null_pct"] == 0
+    assert column["placeholder_count"] == 3
+    assert column["placeholder_pct"] == pytest.approx(30.0)
+
+
 def test_conservative_processing_removes_only_exact_duplicates(tmp_path: Path):
     source = tmp_path / "sales.csv"
     output = tmp_path / "cleaned.csv"

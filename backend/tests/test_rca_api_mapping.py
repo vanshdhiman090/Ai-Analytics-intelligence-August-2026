@@ -404,6 +404,79 @@ def test_segment_reliability_does_not_alter_outcome_for_a_normal_control_segment
     assert "segment_sample_sufficient" in [item.result_code for item in state.verification_records]
 
 
+def test_placeholder_segment_label_blocks_robust_explanation_but_still_counts_in_arithmetic():
+    rows = []
+    for _ in range(6):
+        rows.append({"date": "2026-01-01", "region": "Not Defined", "revenue": 100})
+        rows.append({"date": "2026-02-01", "region": "Not Defined", "revenue": 70})
+        rows.append({"date": "2026-01-01", "region": "Germany", "revenue": 50})
+        rows.append({"date": "2026-02-01", "region": "Germany", "revenue": 48})
+    state, response = _verified_response(rows, ["region"])
+
+    assert state.leading_dimension == "region"
+    assert state.leading_segment == "Not Defined"
+    assert state.verification_status == "weakened"
+    assert state.verification_evidence_strength == "weak"
+    assert "segment_label_not_interpretable" in [
+        item.result_code for item in state.verification_records
+    ]
+
+    # No longer a robust descriptive explanation.
+    assert response.conclusion.claim != "robust_descriptive_explanation"
+    assert response.conclusion.claim == "mathematical_observation"
+    assert response.conclusion.readiness.status == "not_ready"
+    assert response.conclusion.readiness.reason == "insufficient_evidence"
+    assert "insufficient_segment_reliability" in response.conclusion.caveats
+
+    # The placeholder segment's movement is still counted in the arithmetic --
+    # this challenge only blocks the *explanation*, not the calculation -- and
+    # reconciliation still ties out.
+    leading_test = next(
+        item for item in state.tests_executed if item.dimension == "region"
+    )
+    assert leading_test.reconciles_to_kpi_change is True
+    placeholder_segment = next(
+        item
+        for item in leading_test.segment_contributions
+        if item.segment == "Not Defined"
+    )
+    assert placeholder_segment.signed_change == pytest.approx(-180.0)
+    assert response.selected_decomposition is not None
+    assert response.selected_decomposition.reconciles is True
+    assert response.selected_decomposition.leading_segment_movement == pytest.approx(-180.0)
+
+    # The new data-quality code appears in the public response.
+    issue = next(
+        item
+        for item in response.data_quality.issues
+        if item.code == "segment_label_not_interpretable"
+    )
+    assert issue.severity == "caution"
+
+
+def test_legitimately_named_segment_of_the_same_shape_is_unaffected_by_the_placeholder_check():
+    rows = []
+    for _ in range(6):
+        rows.append({"date": "2026-01-01", "region": "Enterprise", "revenue": 100})
+        rows.append({"date": "2026-02-01", "region": "Enterprise", "revenue": 70})
+        rows.append({"date": "2026-01-01", "region": "Germany", "revenue": 50})
+        rows.append({"date": "2026-02-01", "region": "Germany", "revenue": 48})
+    state, response = _verified_response(rows, ["region"])
+
+    assert state.leading_dimension == "region"
+    assert state.leading_segment == "Enterprise"
+    assert state.verification_status == "robust_no_material_challenge"
+    assert state.verification_evidence_strength == "strong"
+    assert "segment_label_not_interpretable" not in [
+        item.result_code for item in state.verification_records
+    ]
+    assert response.conclusion.claim == "robust_descriptive_explanation"
+    assert response.conclusion.readiness.status == "ready_with_caveats"
+    assert "insufficient_segment_reliability" not in response.conclusion.caveats
+    assert response.data_quality.status == "pass"
+    assert response.data_quality.issues == ()
+
+
 def test_prioritization_rationale_resolves_by_planning_id_not_list_position():
     winning_record = HypothesisPlanningRecord(
         planning_id="IP2",

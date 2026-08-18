@@ -85,6 +85,7 @@ RCADataQualityCodeV1 = Literal[
     "insufficient_segment_sample",
     "segment_structurally_absent",
     "segment_baseline_unavailable",
+    "segment_label_not_interpretable",
 ]
 
 
@@ -263,8 +264,8 @@ class RCAEvidenceV1(RCAAPIModel):
     quality_code: RCADataQualityCodeV1 | None = None
     # Raw row counts backing a segment-reliability data-quality issue (see
     # RCADataQualityCodeV1's insufficient_segment_sample /
-    # segment_structurally_absent / segment_baseline_unavailable). Null for
-    # every other evidence kind.
+    # segment_structurally_absent / segment_baseline_unavailable /
+    # segment_label_not_interpretable). Null for every other evidence kind.
     baseline_row_count: int | None = None
     comparison_row_count: int | None = None
 

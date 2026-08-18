@@ -378,6 +378,7 @@ def compile_investigation_conclusion(
         "segment_structurally_absent_caution",
         "segment_structurally_absent_material",
         "segment_baseline_unavailable",
+        "segment_label_not_interpretable",
     } & result_codes:
         caveats.append("insufficient_segment_reliability")
     if state.verification_status == "competing_explanations":

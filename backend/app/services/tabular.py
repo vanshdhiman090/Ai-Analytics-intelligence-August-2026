@@ -9,6 +9,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from app.domain.segment_labels import PLACEHOLDER_SEGMENT_LABELS
+
 
 DATE_NAME_TOKENS = ("date", "time", "timestamp", "month", "quarter", "year")
 DATE_PARSE_MIN_SUCCESS_RATE = 0.99
@@ -210,18 +212,34 @@ def infer_semantic_type(series: pd.Series) -> str:
     return "categorical" if non_null.nunique() <= 50 or ratio <= 0.2 else "text"
 
 
+def _placeholder_count(non_null: pd.Series) -> int:
+    """Count non-null values whose stripped, lowercased label is a known placeholder.
+
+    Distinct from null_count: this catches values a source system wrote in
+    place of a real one ("Not Defined", "unknown", ...) rather than an
+    actually-absent cell, so a wizard can warn about both independently.
+    """
+    if non_null.empty:
+        return 0
+    normalized = non_null.astype("string").str.strip().str.lower()
+    return int(normalized.isin(PLACEHOLDER_SEGMENT_LABELS).sum())
+
+
 def profile_dataframe(df: pd.DataFrame) -> dict:
     columns: dict[str, dict] = {}
     for name in df.columns:
         series = df[name]
         semantic_type = infer_semantic_type(series)
         non_null = series.dropna()
+        placeholder_count = _placeholder_count(non_null)
         item = {
             "name": str(name),
             "dtype": str(series.dtype),
             "semantic_type": semantic_type,
             "null_count": int(series.isna().sum()),
             "null_pct": round(float(series.isna().mean() * 100), 2),
+            "placeholder_count": placeholder_count,
+            "placeholder_pct": round(float(placeholder_count / len(series) * 100), 2) if len(series) else 0.0,
             "unique_count": int(series.nunique(dropna=True)),
             "sample_values": [json_value(value) for value in non_null.head(3).tolist()],
         }

@@ -70,6 +70,7 @@ export const QUALITY_LABELS = {
   insufficient_segment_sample: "This segment has too few raw rows in one period to trust the measured change",
   segment_structurally_absent: "This segment's rows disappeared or newly appeared between periods — a structural change, not a measured decline",
   segment_baseline_unavailable: "This segment's baseline period has no usable metric values — there is no baseline to compare against",
+  segment_label_not_interpretable: "This segment's label is a missing-data placeholder, not a business category — its movement is measured but cannot support a descriptive explanation",
 };
 
 export function titleize(value) {

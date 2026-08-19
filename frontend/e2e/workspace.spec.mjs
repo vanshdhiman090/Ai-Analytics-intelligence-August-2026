@@ -27,7 +27,7 @@ function datasetResponse() {
       constant_columns: ["constant_field"],
       columns: {
         date: profileColumn("date", "datetime", 2, { date_semantics: { status: "CONFIDENT_DATE_FORMAT", min_date: "2026-01-01T00:00:00", max_date: "2026-02-01T00:00:00", missing_months: [] } }),
-        revenue: profileColumn("revenue", "numeric", 7),
+        revenue: profileColumn("revenue", "numeric", 7, { numeric_role: "quantity" }),
         country: profileColumn("country", "categorical", 3),
         device: profileColumn("device", "categorical", 2),
         customer_type: profileColumn("customer_type", "categorical", 2),
@@ -52,7 +52,7 @@ function replacementDatasetResponse() {
       constant_columns: [],
       columns: {
         occurred_at: profileColumn("occurred_at", "datetime", 2, { date_semantics: { status: "CONFIDENT_DATE_FORMAT", min_date: "2026-03-01T00:00:00", max_date: "2026-04-01T00:00:00", missing_months: [] } }),
-        sales: profileColumn("sales", "numeric", 4),
+        sales: profileColumn("sales", "numeric", 4, { numeric_role: "quantity" }),
         region: profileColumn("region", "categorical", 2),
       },
     },
@@ -75,6 +75,35 @@ function unusableSchemaDatasetResponse() {
         event_date: profileColumn("event_date", "text", 3, { date_semantics: { status: "INVALID_DATE_COLUMN", min_date: null, max_date: null, missing_months: [] } }),
         revenue_label: profileColumn("revenue_label", "text", 3),
         constant_field: profileColumn("constant_field", "categorical", 1),
+      },
+    },
+    preview: [],
+  };
+}
+
+function coffeeShopDatasetResponse() {
+  return {
+    dataset_id: DATASET_B_ID,
+    filename: "coffee-shop.csv",
+    size_bytes: 20480,
+    profile: {
+      row_count: 100,
+      column_count: 10,
+      duplicate_row_count: 0,
+      all_null_columns: [],
+      constant_columns: [],
+      columns: {
+        date: profileColumn("date", "datetime", 30, { date_semantics: { status: "CONFIDENT_DATE_FORMAT", min_date: "2026-01-01T00:00:00", max_date: "2026-01-30T00:00:00", missing_months: [] } }),
+        transaction_id: profileColumn("transaction_id", "numeric", 100, { numeric_role: "identifier" }),
+        store_id: profileColumn("store_id", "numeric", 5, { numeric_role: "identifier" }),
+        product_id: profileColumn("product_id", "numeric", 40, { numeric_role: "identifier" }),
+        Hour: profileColumn("Hour", "numeric", 24, { numeric_role: "cyclical" }),
+        Month: profileColumn("Month", "numeric", 12, { numeric_role: "cyclical" }),
+        "Day of Week": profileColumn("Day of Week", "numeric", 7, { numeric_role: "cyclical" }),
+        Rating: profileColumn("Rating", "numeric", 5, { numeric_role: "discrete_scale" }),
+        "Total Bill": profileColumn("Total Bill", "numeric", 37, { numeric_role: "quantity" }),
+        "Unit Price": profileColumn("Unit Price", "numeric", 23, { numeric_role: "quantity" }),
+        Category: profileColumn("Category", "categorical", 4),
       },
     },
     preview: [],
@@ -415,6 +444,45 @@ test("an uploaded schema without numeric KPI or safe date candidates is bounded 
   await expect(page.getByText("This dataset has no confidently parsed date column.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Review investigation" })).toBeDisabled();
   await expect(page.locator("label.dimension-option", { hasText: "Constant Field" })).toHaveCount(0);
+});
+
+test("KPI picker offers only additive quantities and dimension picker applies role-specific cautions", async ({ page }) => {
+  await mockApi(page, { datasetResponses: [coffeeShopDatasetResponse()] });
+  await page.goto("/");
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.getByRole("heading", { name: "Define the additive KPI" })).toBeVisible();
+
+  // Identifiers (transaction_id, store_id, product_id), calendar-position columns
+  // (Hour, Month, Day of Week), and the discrete rating scale are all numeric but
+  // non-additive, so none of them may appear as a summable KPI candidate.
+  const metricOptions = await page.getByLabel("Metric column").locator("option").allTextContents();
+  expect(metricOptions).toEqual(["Select a numeric field", "Total Bill", "Unit Price"]);
+  await page.getByLabel("Metric column").selectOption("Unit Price");
+
+  // Identifier dimension: existing caution, unchanged wording.
+  const storeIdOption = page.locator("label.dimension-option", { hasText: "Store Id" });
+  await expect(storeIdOption).toHaveClass(/caution/);
+  await expect(storeIdOption.locator("em").first()).toHaveText("High cardinality or identifier-like — select only when analytically meaningful");
+
+  // Cyclical (Hour) and discrete-scale (Rating) dimensions: legitimate segmentation axes, no caution.
+  const hourOption = page.locator("label.dimension-option", { hasText: "Hour" });
+  await expect(hourOption).not.toHaveClass(/caution/);
+  const ratingOption = page.locator("label.dimension-option", { hasText: "Rating" });
+  await expect(ratingOption).not.toHaveClass(/caution/);
+  await expect(ratingOption.locator("em")).toHaveCount(0);
+
+  // Quantity dimension (Total Bill, left unselected as metric): new, distinct caution.
+  const totalBillOption = page.locator("label.dimension-option", { hasText: "Total Bill" });
+  await expect(totalBillOption).toHaveClass(/caution/);
+  await expect(totalBillOption.locator("em").first()).toHaveText("Continuous business quantity — grouping by exact value can fragment data into near single-row segments");
+
+  // Ordinary categorical dimension: unaffected control case.
+  await expect(page.locator("label.dimension-option", { hasText: "Category" })).not.toHaveClass(/caution/);
+
+  // Month is hard-excluded from the dimension list entirely: default time grain is "month",
+  // so testing the KPI's movement "by month" against a dimension literally named Month is circular.
+  await expect(page.locator("label.dimension-option", { hasText: "Month" })).toHaveCount(0);
+  await expect(page.locator("label.dimension-option", { hasText: "Day Of Week" })).toHaveCount(1);
 });
 
 for (const failure of [

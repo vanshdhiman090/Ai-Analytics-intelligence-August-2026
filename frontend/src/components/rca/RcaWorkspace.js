@@ -35,7 +35,7 @@ const RECRUITER_DEMO_MODE = process.env.NEXT_PUBLIC_RECRUITER_DEMO_MODE === "tru
 function defaultForm(dataset) {
   const columns = Object.values(dataset?.profile?.columns || {});
   const allNull = new Set(dataset?.profile?.all_null_columns || []);
-  const metric = columns.find((column) => column.semantic_type === "numeric" && !allNull.has(column.name));
+  const metric = columns.find((column) => column.semantic_type === "numeric" && column.numeric_role === "quantity" && !allNull.has(column.name));
   const time = columns.find((column) => column.semantic_type === "datetime" && column.date_semantics?.status !== "AMBIGUOUS_DATE_FORMAT");
   return {
     ...EMPTY_FORM,

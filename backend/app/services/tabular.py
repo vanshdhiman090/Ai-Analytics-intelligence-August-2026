@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,58 @@ from app.domain.segment_labels import PLACEHOLDER_SEGMENT_LABELS
 
 DATE_NAME_TOKENS = ("date", "time", "timestamp", "month", "quarter", "year")
 DATE_PARSE_MIN_SUCCESS_RATE = 0.99
+
+IDENTIFIER_NAME_PATTERN = re.compile(r"(^id$|_id$|^id_|identifier|uuid|_key$)")
+IDENTIFIER_UNIQUENESS_RATIO = 0.9
+
+# Numeric columns whose name signals a calendar/cyclical position (not an
+# additive quantity). Cardinality must also fit that unit, so a "Month"
+# column with 40 distinct values (not a calendar month) still falls through
+# to quantity/discrete_scale rather than being misread as cyclical.
+CYCLICAL_NAME_BOUNDS: tuple[tuple[tuple[str, ...], int], ...] = (
+    (("hour",), 24),
+    (("day of week", "dayofweek", "weekday"), 7),
+    (("month",), 12),
+    (("quarter",), 4),
+    (("week",), 53),
+)
+
+# Numeric columns that are neither an identifier nor a named calendar unit,
+# but still have too few distinct values to be a summable quantity (rating
+# scales, boolean-as-integer flags, tier levels). This is a cardinality
+# heuristic only; a high-cardinality non-additive column such as a percentage
+# or rate is a known, separate gap this milestone does not address.
+DISCRETE_SCALE_MAX_UNIQUE = 15
+
+
+def classify_numeric_role(series: pd.Series, name: str, row_count: int) -> str | None:
+    """Classify a numeric column's business role for KPI/dimension eligibility.
+
+    Returns one of "identifier", "cyclical", "discrete_scale", "quantity" for
+    a numeric-dtype column, or None for a non-numeric column. Only "quantity"
+    is safe to offer as a summable KPI.
+    """
+    if not pd.api.types.is_numeric_dtype(series):
+        return None
+    non_null = series.dropna()
+    if non_null.empty:
+        return "quantity"
+
+    lowered = str(name).lower()
+    unique_count = int(non_null.nunique())
+    ratio = unique_count / row_count if row_count else 0.0
+
+    if IDENTIFIER_NAME_PATTERN.search(lowered) or ratio >= IDENTIFIER_UNIQUENESS_RATIO:
+        return "identifier"
+
+    for tokens, bound in CYCLICAL_NAME_BOUNDS:
+        if any(token in lowered for token in tokens) and unique_count <= bound:
+            return "cyclical"
+
+    if unique_count <= DISCRETE_SCALE_MAX_UNIQUE:
+        return "discrete_scale"
+
+    return "quantity"
 
 
 class DateSemanticError(ValueError):
@@ -236,6 +289,7 @@ def profile_dataframe(df: pd.DataFrame) -> dict:
             "name": str(name),
             "dtype": str(series.dtype),
             "semantic_type": semantic_type,
+            "numeric_role": classify_numeric_role(series, str(name), len(df)),
             "null_count": int(series.isna().sum()),
             "null_pct": round(float(series.isna().mean() * 100), 2),
             "placeholder_count": placeholder_count,

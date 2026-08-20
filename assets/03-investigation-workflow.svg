@@ -1,0 +1,65 @@
+<svg viewBox="0 0 900 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4A5A7A"/>
+    </marker>
+    <marker id="arrow3" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2DD4BF"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="1000" fill="#0B1120"/>
+  <text x="450" y="35" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#E5E9F0">How the Investigation Works &#8212; Controlled Loop</text>
+
+  <!-- steps: x=170 width=600 height=64, step=98, y0=60 -->
+
+  <!-- 1 -->
+  <rect x="170" y="60" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="98" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">1&#183; Validate columns, dates, periods, coverage, completeness</text>
+  <line x1="470" y1="124" x2="470" y2="158" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 2 -->
+  <rect x="170" y="160" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="198" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">2&#183; Create or prioritize hypotheses from approved dimensions</text>
+  <line x1="470" y1="224" x2="470" y2="258" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 3 -->
+  <rect x="170" y="260" width="600" height="64" rx="6" fill="#131C2E" stroke="#2DD4BF" stroke-width="2"/>
+  <text x="190" y="298" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">3&#183; Execute deterministic contribution tests</text>
+  <line x1="470" y1="324" x2="470" y2="358" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 4 -->
+  <rect x="170" y="360" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="398" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">4&#183; Store the evidence from every test</text>
+  <line x1="470" y1="424" x2="470" y2="458" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 5 -->
+  <rect x="170" y="460" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="498" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">5&#183; Update each hypothesis: supported, weak, rejected, unresolved</text>
+  <line x1="470" y1="524" x2="470" y2="558" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 6 -->
+  <rect x="170" y="560" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="598" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">6&#183; Select a material contributor by total-movement share</text>
+  <line x1="470" y1="624" x2="470" y2="658" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 7 -->
+  <rect x="170" y="660" width="600" height="64" rx="6" fill="#131C2E" stroke="#2DD4BF" stroke-width="2"/>
+  <text x="190" y="698" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">7&#183; Scope one level deeper, if evidence and depth policy allow</text>
+  <line x1="470" y1="724" x2="470" y2="758" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 8 -->
+  <rect x="170" y="760" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="798" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">8&#183; Test competing explanations, run five verification challenges</text>
+  <line x1="470" y1="824" x2="470" y2="858" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 9 -->
+  <rect x="170" y="860" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="898" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">9&#183; Compile the bounded conclusion and next analytical action</text>
+
+  <!-- loop back path from step 7 to step 3 -->
+  <path d="M 170,692 C 70,692 70,292 170,292" fill="none" stroke="#2DD4BF" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow3)"/>
+  <text x="40" y="495" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#2DD4BF" transform="rotate(-90 40 495)">deeper scope loop</text>
+
+  <text x="450" y="960" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#5C6B8A">Stops early on unsafe data, competing evidence, no material driver, or maximum depth &#8212; never a forced winner.</text>
+</svg>

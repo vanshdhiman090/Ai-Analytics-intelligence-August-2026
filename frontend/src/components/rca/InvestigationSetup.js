@@ -17,10 +17,33 @@ function isConfidentDate(column) {
   return column.semantic_type === "datetime" && column.date_semantics?.status !== "AMBIGUOUS_DATE_FORMAT";
 }
 
-function isIdentifierLike(column, rowCount) {
+const GRAIN_NAME_TOKENS = {
+  day: ["day"],
+  week: ["week"],
+  month: ["month"],
+  quarter: ["quarter"],
+  year: ["year"],
+};
+
+function matchesActiveGrain(name, grain) {
+  const tokens = GRAIN_NAME_TOKENS[grain] || [];
+  const lowered = String(name || "").toLowerCase();
+  return tokens.some((token) => lowered.includes(token));
+}
+
+// numeric_role (from backend profiling) only classifies numeric-dtype
+// columns; a non-numeric identifier (e.g. a string order_id) falls back to
+// the original name/cardinality heuristic so that case isn't silently lost.
+function dimensionCaution(column, rowCount) {
+  if (column.semantic_type === "numeric") {
+    if (column.numeric_role === "identifier") return "identifier";
+    if (column.numeric_role === "quantity") return "quantity";
+    return null;
+  }
   const name = String(column.name || "").toLowerCase();
   const ratio = rowCount ? Number(column.unique_count || 0) / rowCount : 0;
-  return /(^id$|_id$|^id_|identifier|uuid|_key$)/.test(name) || ratio >= 0.9;
+  const isIdentifierLike = /(^id$|_id$|^id_|identifier|uuid|_key$)/.test(name) || ratio >= 0.9;
+  return isIdentifierLike ? "identifier" : null;
 }
 
 function PeriodInput({ prefix, label, grain, value, onChange, errors }) {
@@ -174,13 +197,17 @@ function ConfigurationForm({ dataset, form, errors, onChange, onToggleDimension,
   const columns = columnsFrom(dataset);
   const allNull = new Set(dataset.profile?.all_null_columns || []);
   const constant = new Set(dataset.profile?.constant_columns || []);
-  const metricColumns = columns.filter((column) => column.semantic_type === "numeric" && !allNull.has(column.name));
+  const metricColumns = columns.filter((column) => column.semantic_type === "numeric" && column.numeric_role === "quantity" && !allNull.has(column.name));
   const timeColumns = columns.filter(isConfidentDate);
   const invalidDates = columns.filter((column) => column.date_semantics && !isConfidentDate(column));
   const eligibleDimensions = columns
     .filter((column) => !allNull.has(column.name) && !constant.has(column.name))
     .filter((column) => ![form.metricColumn, form.timeColumn].includes(column.name))
-    .map((column) => ({ ...column, caution: isIdentifierLike(column, dataset.profile?.row_count) }))
+    .filter((column) => !matchesActiveGrain(column.name, form.grain))
+    .map((column) => {
+      const cautionType = dimensionCaution(column, dataset.profile?.row_count);
+      return { ...column, caution: Boolean(cautionType), cautionType };
+    })
     .sort((left, right) => {
       const leftPriority = ["categorical", "boolean"].includes(left.semantic_type) && !left.caution ? 0 : 1;
       const rightPriority = ["categorical", "boolean"].includes(right.semantic_type) && !right.caution ? 0 : 1;
@@ -258,7 +285,7 @@ function ConfigurationForm({ dataset, form, errors, onChange, onToggleDimension,
         <p className="section-copy">Dimensions are investigation axes. Select 1–12 fields the agent may test; they are not pre-declared causes.</p>
         <fieldset className="dimension-fieldset" aria-describedby={errors.dimensions ? "dimensions-error" : "dimension-selection-hint"}>
           <legend className="sr-only">Candidate business dimensions</legend>
-          <p className="field-hint" id="dimension-selection-hint">{form.dimensions.length}/12 selected. Identifier-like and high-cardinality fields require deliberate selection.</p>
+          <p className="field-hint" id="dimension-selection-hint">{form.dimensions.length}/12 selected. Identifier-like, high-cardinality, and continuous-quantity fields require deliberate selection.</p>
           <div className="dimension-list">
             {eligibleDimensions.map((column) => (
               <label key={column.name} className={`dimension-option ${selected.has(column.name) ? "selected" : ""} ${column.caution ? "caution" : ""}`}>
@@ -269,7 +296,8 @@ function ConfigurationForm({ dataset, form, errors, onChange, onToggleDimension,
                     {column.semantic_type} · {Number(column.unique_count || 0).toLocaleString()} unique · {column.null_pct || 0}% null
                     {Boolean(column.placeholder_pct) && <> · {column.placeholder_pct}% placeholder values</>}
                   </small>
-                  {column.caution && <em>High cardinality or identifier-like — select only when analytically meaningful</em>}
+                  {column.cautionType === "identifier" && <em>High cardinality or identifier-like — select only when analytically meaningful</em>}
+                  {column.cautionType === "quantity" && <em>Continuous business quantity — grouping by exact value can fragment data into near single-row segments</em>}
                   {Boolean(column.placeholder_pct) && (
                     <em>Contains missing-data placeholders (e.g. &quot;Not Defined&quot;) — these will not support a descriptive explanation even if arithmetically leading</em>
                   )}
@@ -280,7 +308,8 @@ function ConfigurationForm({ dataset, form, errors, onChange, onToggleDimension,
         </fieldset>
         <FieldError id="dimensions" errors={errors} />
         {!eligibleDimensions.length && <p className="inline-blocker">No eligible candidate dimensions remain after excluding the KPI, time, all-null, and constant fields.</p>}
-        {selectedColumns.some((column) => column.caution) && <p className="inline-caution">Your selection includes a high-cardinality or identifier-like field. Confirm that it represents a meaningful business segment before continuing.</p>}
+        {selectedColumns.some((column) => column.cautionType === "identifier") && <p className="inline-caution">Your selection includes a high-cardinality or identifier-like field. Confirm that it represents a meaningful business segment before continuing.</p>}
+        {selectedColumns.some((column) => column.cautionType === "quantity") && <p className="inline-caution">Your selection includes a continuous business quantity. Confirm that grouping by its exact values still produces a meaningful business segment.</p>}
       </section>
 
       <div className="sticky-action-row">

@@ -1,0 +1,11 @@
+<svg viewBox="0 0 1200 260" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="1200" height="260" fill="#0B1120"/>
+  <rect x="0" y="0" width="1200" height="4" fill="#2DD4BF"/>
+
+  <text x="600" y="118" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="40" font-weight="600" fill="#E5E9F0">AI Root Cause Investigation Agent</text>
+
+  <text x="600" y="158" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" fill="#94A3B8">Deterministic contribution analysis &#183; Bounded hypothesis testing &#183; Explicit uncertainty</text>
+
+  <rect x="470" y="192" width="260" height="32" rx="16" fill="#131C2E" stroke="#2C3A57" stroke-width="1"/>
+  <text x="600" y="213" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" letter-spacing="1.5" fill="#2DD4BF">ROOT CAUSE INVESTIGATION</text>
+</svg>

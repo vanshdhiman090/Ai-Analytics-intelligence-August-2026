@@ -38,7 +38,7 @@ function demoDatasetResponse() {
             missing_months: [],
           },
         }),
-        revenue: profileColumn("revenue", "numeric", 8),
+        revenue: profileColumn("revenue", "numeric", 8, { numeric_role: "quantity" }),
         country: profileColumn("country", "categorical", 4),
         device: profileColumn("device", "categorical", 2),
         customer_type: profileColumn("customer_type", "categorical", 2),

@@ -1,0 +1,43 @@
+<svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="1000" height="800" fill="#0B1120"/>
+  <text x="500" y="35" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#E5E9F0">AI vs Deterministic Boundary</text>
+  <text x="500" y="58" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">The LLM influences order. It cannot change the answer.</text>
+
+  <!-- LAYER 1: LLM -->
+  <rect x="80" y="90" width="840" height="160" rx="8" fill="#151E33" stroke="#3A4A6B" stroke-width="1.5"/>
+  <text x="105" y="122" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#C4B5FD">LLM (Gemini)</text>
+  <text x="105" y="152" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">&#8226; Proposes which dimension to test first</text>
+  <text x="105" y="176" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">&#8226; Writes a pre-test rationale ("why this was checked")</text>
+  <text x="105" y="200" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">&#8226; Orders verification challenges</text>
+  <rect x="660" y="205" width="235" height="28" rx="14" fill="#1E1533" stroke="#8B5CF6"/>
+  <text x="777" y="224" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="11" letter-spacing="0.5" fill="#C4B5FD">INFLUENCES ORDER ONLY</text>
+
+  <line x1="500" y1="250" x2="500" y2="280" stroke="#2DD4BF" stroke-width="2"/>
+
+  <!-- LAYER 2: guarantee boundary -->
+  <rect x="80" y="282" width="840" height="150" rx="8" fill="#0F2A28" stroke="#2DD4BF" stroke-width="2.5"/>
+  <text x="105" y="314" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#5EEAD4">Deterministic guarantee</text>
+  <text x="105" y="344" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#A7F3D0">&#8226; Any omitted dimension is force-appended automatically</text>
+  <text x="105" y="368" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#A7F3D0">&#8226; Every applicable verification challenge always runs</text>
+  <text x="105" y="392" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#A7F3D0">&#8226; Early stop is rejected while untested dimensions remain</text>
+  <rect x="580" y="397" width="315" height="28" rx="14" fill="#0A1F1D" stroke="#2DD4BF"/>
+  <text x="737" y="416" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="11" letter-spacing="0.5" fill="#5EEAD4">CANNOT SKIP, SHRINK, OR STOP</text>
+
+  <line x1="500" y1="432" x2="500" y2="462" stroke="#2DD4BF" stroke-width="2"/>
+
+  <!-- LAYER 3: deterministic engine -->
+  <rect x="80" y="464" width="840" height="170" rx="8" fill="#10192B" stroke="#3A4A6B" stroke-width="1.5"/>
+  <text x="105" y="496" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">Deterministic engine (Python / pandas)</text>
+  <text x="105" y="526" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">&#8226; Contribution decomposition and signed movement</text>
+  <text x="105" y="550" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">&#8226; Five verification challenges (competing driver, remainder, offset,</text>
+  <text x="120" y="570" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">data quality, segment reliability)</text>
+  <text x="105" y="594" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">&#8226; Reconciliation tie-out and conclusion compiler</text>
+  <rect x="700" y="598" width="195" height="28" rx="14" fill="#0B1120" stroke="#5C6B8A"/>
+  <text x="797" y="617" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="11" letter-spacing="0.5" fill="#E5E9F0">DETERMINES THE ANSWER</text>
+
+  <!-- fallback path -->
+  <rect x="80" y="670" width="840" height="90" rx="6" fill="#131C2E" stroke="#4A5A7A" stroke-width="1" stroke-dasharray="5 4"/>
+  <text x="105" y="700" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#E5E9F0">Fallback path</text>
+  <text x="105" y="724" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#94A3B8">Provider failure, timeout, or malformed output &#8594; deterministic fallback,</text>
+  <text x="105" y="744" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#94A3B8">logged with the investigation_id so a degraded run is traceable, not silent.</text>
+</svg>

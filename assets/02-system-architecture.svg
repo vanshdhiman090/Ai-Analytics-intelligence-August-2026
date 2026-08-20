@@ -1,108 +1,56 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="940" viewBox="0 0 1400 940" role="img" aria-labelledby="title desc">
-  <title id="title">AI Root Cause Investigation Agent system architecture</title>
-  <desc id="desc">The real public RCA V1 path from user and Next.js workspace through dataset upload, FastAPI contracts, governed deterministic runtime, public typed response, and the result interface.</desc>
+<svg viewBox="0 0 900 1000" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06131f"/><stop offset="1" stop-color="#0a1c29"/></linearGradient>
-    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2dd4bf"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#4d7289"/></marker>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#02070c" flood-opacity="0.45"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4A5A7A"/>
+    </marker>
   </defs>
-  <rect width="1400" height="940" rx="26" fill="url(#bg)"/>
-  <text x="70" y="72" fill="#f3f8fc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="760">Public RCA V1 system architecture</text>
-  <text x="70" y="105" fill="#91aabd" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17">Validated browser → API → governed investigation runtime → bounded public result</text>
-  <rect x="70" y="126" width="1260" height="3" rx="2" fill="url(#flow)"/>
 
-  <g font-family="Inter, Segoe UI, Arial, sans-serif" filter="url(#shadow)">
-    <g transform="translate(70 170)">
-      <rect width="250" height="118" rx="16" fill="#0c2536" stroke="#284a60"/>
-      <text x="22" y="30" fill="#7f9eb4" font-size="11" font-weight="700" letter-spacing="1.5">EXPERIENCE</text>
-      <text x="22" y="61" fill="#edf6fc" font-size="20" font-weight="700">User</text>
-      <text x="22" y="87" fill="#9bb3c5" font-size="14">KPI + periods + dimensions</text>
-    </g>
-    <g transform="translate(390 170)">
-      <rect width="340" height="118" rx="16" fill="#0c2536" stroke="#2dd4bf"/>
-      <text x="22" y="30" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.5">NEXT.JS</text>
-      <text x="22" y="61" fill="#edf6fc" font-size="20" font-weight="700">Investigation Workspace</text>
-      <text x="22" y="87" fill="#9bb3c5" font-size="14">Upload · configure · review · investigate</text>
-    </g>
-    <g transform="translate(800 170)">
-      <rect width="250" height="118" rx="16" fill="#0c2536" stroke="#60a5fa"/>
-      <text x="22" y="30" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.5">PUBLIC API</text>
-      <text x="22" y="61" fill="#edf6fc" font-size="20" font-weight="700">POST /datasets</text>
-      <text x="22" y="87" fill="#9bb3c5" font-size="14">CSV/XLSX upload</text>
-    </g>
-    <g transform="translate(1110 170)">
-      <rect width="220" height="118" rx="16" fill="#0c2536" stroke="#60a5fa"/>
-      <text x="22" y="30" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.5">FASTAPI</text>
-      <text x="22" y="61" fill="#edf6fc" font-size="19" font-weight="700">Validation + Profile</text>
-      <text x="22" y="87" fill="#9bb3c5" font-size="14">Opaque dataset UUID</text>
-    </g>
-  </g>
-  <g stroke="#4d7289" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M320 229 H378"/><path d="M730 229 H788"/><path d="M1050 229 H1098"/></g>
+  <rect x="0" y="0" width="900" height="1000" fill="#0B1120"/>
+  <text x="450" y="35" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#E5E9F0">System Architecture &#8212; Public Request Path</text>
 
-  <path d="M1220 300 V338 H175 V370" stroke="#4d7289" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <!-- Box template: x=130 width=640 height=80 -->
 
-  <g font-family="Inter, Segoe UI, Arial, sans-serif" filter="url(#shadow)">
-    <g transform="translate(70 382)">
-      <rect width="300" height="126" rx="16" fill="#0c2536" stroke="#60a5fa"/>
-      <text x="22" y="31" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.4">PUBLIC RCA CONTRACT</text>
-      <text x="22" y="63" fill="#edf6fc" font-size="19" font-weight="700">POST /v1/rca/investigations</text>
-      <text x="22" y="91" fill="#9bb3c5" font-size="14">Typed request · server-owned policy</text>
-    </g>
-    <g transform="translate(420 382)">
-      <rect width="250" height="126" rx="16" fill="#0c2536" stroke="#2dd4bf"/>
-      <text x="22" y="31" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.4">SERVICE</text>
-      <text x="22" y="63" fill="#edf6fc" font-size="20" font-weight="700">Governed RCA Service</text>
-      <text x="22" y="91" fill="#9bb3c5" font-size="14">Safe dataset resolver + mapper</text>
-    </g>
-    <g transform="translate(720 350)">
-      <rect width="360" height="190" rx="18" fill="#0d2a36" stroke="#2dd4bf" stroke-width="2"/>
-      <text x="24" y="33" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.4">DETERMINISTIC CORE</text>
-      <text x="24" y="66" fill="#f3f8fc" font-size="22" font-weight="700">Investigation Runtime</text>
-      <text x="24" y="99" fill="#a5bbca" font-size="14">KPI and period arithmetic</text>
-      <text x="24" y="123" fill="#a5bbca" font-size="14">Signed contribution decomposition</text>
-      <text x="24" y="147" fill="#a5bbca" font-size="14">Data quality + reconciliation</text>
-      <text x="24" y="171" fill="#a5bbca" font-size="14">Bounded path control + fallback</text>
-    </g>
-    <g transform="translate(1130 382)">
-      <rect width="200" height="126" rx="16" fill="#0c2536" stroke="#f59e0b"/>
-      <text x="20" y="31" fill="#fbbf24" font-size="11" font-weight="700" letter-spacing="1.3">CLAIM CONTROL</text>
-      <text x="20" y="62" fill="#edf6fc" font-size="18" font-weight="700">Verification</text>
-      <text x="20" y="87" fill="#edf6fc" font-size="18" font-weight="700">+ Conclusion Compiler</text>
-    </g>
-  </g>
-  <g stroke="#4d7289" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M370 445 H408"/><path d="M670 445 H708"/><path d="M1080 445 H1118"/></g>
+  <!-- 1 -->
+  <rect x="130" y="65" width="640" height="80" rx="8" fill="#131C2E" stroke="#2C3A57" stroke-width="1.5"/>
+  <text x="155" y="98" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">1. Next.js Investigation Workspace</text>
+  <text x="155" y="120" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">Collects the dataset and bounded configuration</text>
+  <line x1="450" y1="145" x2="450" y2="188" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <path d="M1230 520 V580 H1148" stroke="#4d7289" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <!-- 2 -->
+  <rect x="130" y="190" width="640" height="80" rx="8" fill="#131C2E" stroke="#2C3A57" stroke-width="1.5"/>
+  <text x="155" y="223" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">2. POST /datasets</text>
+  <text x="155" y="245" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">Validates, profiles deterministically, returns an opaque UUID</text>
+  <line x1="450" y1="270" x2="450" y2="313" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <g font-family="Inter, Segoe UI, Arial, sans-serif" filter="url(#shadow)">
-    <g transform="translate(850 594)">
-      <rect width="300" height="126" rx="16" fill="#0c2536" stroke="#60a5fa"/>
-      <text x="22" y="31" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.4">SAFE OUTPUT</text>
-      <text x="22" y="63" fill="#edf6fc" font-size="20" font-weight="700">Public Typed Response</text>
-      <text x="22" y="91" fill="#9bb3c5" font-size="14">Evidence refs · caveats · next action</text>
-    </g>
-    <g transform="translate(440 594)">
-      <rect width="340" height="126" rx="16" fill="#0c2536" stroke="#2dd4bf"/>
-      <text x="22" y="31" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.4">NEXT.JS RESULT</text>
-      <text x="22" y="63" fill="#edf6fc" font-size="20" font-weight="700">InvestigationResult UI</text>
-      <text x="22" y="91" fill="#9bb3c5" font-size="14">Path · tie-out · quality · uncertainty</text>
-    </g>
-    <g transform="translate(70 594)">
-      <rect width="300" height="126" rx="16" fill="#0c2536" stroke="#284a60"/>
-      <text x="22" y="31" fill="#7f9eb4" font-size="11" font-weight="700" letter-spacing="1.4">USER OUTCOME</text>
-      <text x="22" y="63" fill="#edf6fc" font-size="20" font-weight="700">Evidence-backed result</text>
-      <text x="22" y="91" fill="#9bb3c5" font-size="14">Bounded, descriptive, auditable</text>
-    </g>
-  </g>
-  <g stroke="#4d7289" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M850 657 H792"/><path d="M440 657 H382"/></g>
+  <!-- 3 -->
+  <rect x="130" y="315" width="640" height="80" rx="8" fill="#131C2E" stroke="#2C3A57" stroke-width="1.5"/>
+  <text x="155" y="348" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">3. POST /v1/rca/investigations</text>
+  <text x="155" y="370" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">Validates the public typed contract, resolves the server-owned dataset</text>
+  <line x1="450" y1="395" x2="450" y2="438" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <g transform="translate(70 790)" font-family="Inter, Segoe UI, Arial, sans-serif">
-    <rect width="1260" height="100" rx="16" fill="#081a27" stroke="#1f3b4e"/>
-    <text x="24" y="28" fill="#718fa5" font-size="11" font-weight="700" letter-spacing="1.5">SUPPORTING INFRASTRUCTURE</text>
-    <g transform="translate(24 44)"><circle cx="8" cy="8" r="7" fill="#60a5fa"/><text x="26" y="13" fill="#c5d6e2" font-size="14">PostgreSQL metadata</text></g>
-    <g transform="translate(270 44)"><circle cx="8" cy="8" r="7" fill="#2dd4bf"/><text x="26" y="13" fill="#c5d6e2" font-size="14">Governed local dataset lifecycle</text></g>
-    <g transform="translate(600 44)"><circle cx="8" cy="8" r="7" fill="#f59e0b"/><text x="26" y="13" fill="#c5d6e2" font-size="14">Request IDs + sanitized errors</text></g>
-    <g transform="translate(915 44)"><circle cx="8" cy="8" r="7" fill="#60a5fa"/><text x="26" y="13" fill="#c5d6e2" font-size="14">GitHub Actions release gates</text></g>
-  </g>
+  <!-- 4 -->
+  <rect x="130" y="440" width="640" height="80" rx="8" fill="#131C2E" stroke="#2C3A57" stroke-width="1.5"/>
+  <text x="155" y="473" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">4. Governed RCA Service</text>
+  <text x="155" y="495" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">Maps public inputs to internal contracts &#8212; depth and thresholds server-owned</text>
+  <line x1="450" y1="520" x2="450" y2="563" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 5 -->
+  <rect x="130" y="565" width="640" height="80" rx="8" fill="#131C2E" stroke="#2C3A57" stroke-width="1.5"/>
+  <text x="155" y="598" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">5. Deterministic Investigation Runtime</text>
+  <text x="155" y="620" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">KPI movement, signed contributions, offsets, quality checks, reconciliation</text>
+  <line x1="450" y1="645" x2="450" y2="688" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 6 -->
+  <rect x="130" y="690" width="640" height="80" rx="8" fill="#131C2E" stroke="#2DD4BF" stroke-width="2"/>
+  <text x="155" y="723" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">6. Verification &amp; Conclusion Compiler</text>
+  <text x="155" y="745" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">Five deterministic challenges limit the conclusion to what evidence supports</text>
+  <line x1="450" y1="770" x2="450" y2="813" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 7 -->
+  <rect x="130" y="815" width="640" height="80" rx="8" fill="#131C2E" stroke="#2C3A57" stroke-width="1.5"/>
+  <text x="155" y="848" font-family="Segoe UI, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E5E9F0">7. Public Response Mapper</text>
+  <text x="155" y="870" font-family="Segoe UI, -apple-system, sans-serif" font-size="13" fill="#94A3B8">Exposes only the typed, allow-listed result the frontend requires</text>
+
+  <text x="450" y="940" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#5C6B8A">PostgreSQL (Neon) stores application metadata across the request path.</text>
+  <text x="450" y="962" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#5C6B8A">The historical LangGraph workflow is not the execution path for this endpoint.</text>
 </svg>

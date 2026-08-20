@@ -1,45 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980" role="img" aria-labelledby="title desc">
-  <title id="title">Governed KPI investigation workflow</title>
-  <desc id="desc">The investigation flow from KPI movement through validation, bounded tests, deterministic contribution analysis, deeper scoped investigation, verification, and bounded stopping outcomes.</desc>
+<svg viewBox="0 0 900 1000" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06131f"/><stop offset="1" stop-color="#0a1d2a"/></linearGradient>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#4f758c"/></marker>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="7" stdDeviation="10" flood-color="#02070c" flood-opacity="0.42"/></filter>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4A5A7A"/>
+    </marker>
+    <marker id="arrow3" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2DD4BF"/>
+    </marker>
   </defs>
-  <rect width="1400" height="980" rx="26" fill="url(#bg)"/>
-  <text x="70" y="68" fill="#f3f8fc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="760">How a KPI investigation progresses</text>
-  <text x="70" y="101" fill="#91aabd" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17">Evidence can advance the path—or stop it without a forced winner.</text>
 
-  <g font-family="Inter, Segoe UI, Arial, sans-serif" filter="url(#shadow)">
-    <g transform="translate(500 140)"><rect width="400" height="74" rx="16" fill="#10283a" stroke="#60a5fa"/><text x="24" y="30" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.5">INCIDENT</text><text x="24" y="56" fill="#f0f7fc" font-size="20" font-weight="700">KPI movement observed</text></g>
-    <g transform="translate(500 252)"><rect width="400" height="82" rx="16" fill="#10283a" stroke="#2dd4bf"/><text x="24" y="31" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.5">SAFETY FIRST</text><text x="24" y="59" fill="#f0f7fc" font-size="19" font-weight="700">Validate periods, fields, coverage</text></g>
-    <g transform="translate(500 374)"><rect width="400" height="90" rx="16" fill="#10283a" stroke="#2dd4bf"/><text x="24" y="31" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.5">BOUNDED PLANNING</text><text x="24" y="59" fill="#f0f7fc" font-size="19" font-weight="700">Prioritize allowed candidate tests</text><text x="24" y="78" fill="#92aabd" font-size="13">Provider-assisted or deterministic fallback</text></g>
-    <g transform="translate(500 504)"><rect width="400" height="90" rx="16" fill="#0d2c38" stroke="#2dd4bf" stroke-width="2"/><text x="24" y="31" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.5">DETERMINISTIC TEST</text><text x="24" y="59" fill="#f0f7fc" font-size="19" font-weight="700">Calculate signed contributions</text><text x="24" y="78" fill="#92aabd" font-size="13">Pressure + offsets + reconciliation tie-out</text></g>
-    <g transform="translate(500 634)"><rect width="400" height="90" rx="16" fill="#10283a" stroke="#60a5fa"/><text x="24" y="31" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.5">EVIDENCE UPDATE</text><text x="24" y="59" fill="#f0f7fc" font-size="19" font-weight="700">Select supported contributor</text><text x="24" y="78" fill="#92aabd" font-size="13">Update hypotheses · scope one level deeper</text></g>
-    <g transform="translate(500 764)"><rect width="400" height="90" rx="16" fill="#10283a" stroke="#f59e0b"/><text x="24" y="31" fill="#fbbf24" font-size="11" font-weight="700" letter-spacing="1.5">INDEPENDENT CONTROL</text><text x="24" y="59" fill="#f0f7fc" font-size="19" font-weight="700">Test alternatives + verify evidence</text><text x="24" y="78" fill="#92aabd" font-size="13">Scope, robustness, caveats, stopping policy</text></g>
-  </g>
+  <rect x="0" y="0" width="900" height="1000" fill="#0B1120"/>
+  <text x="450" y="35" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#E5E9F0">How the Investigation Works &#8212; Controlled Loop</text>
 
-  <g stroke="#4f758c" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M700 214 V240"/><path d="M700 334 V362"/><path d="M700 464 V492"/><path d="M700 594 V622"/><path d="M700 724 V752"/></g>
+  <!-- steps: x=170 width=600 height=64, step=98, y0=60 -->
 
-  <g font-family="Inter, Segoe UI, Arial, sans-serif">
-    <path d="M500 293 H330" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-    <g transform="translate(70 245)"><rect width="250" height="96" rx="14" fill="#2e2415" stroke="#f59e0b"/><text x="20" y="30" fill="#fbbf24" font-size="11" font-weight="700" letter-spacing="1.3">UNSAFE DATA</text><text x="20" y="57" fill="#f3ead4" font-size="17" font-weight="700">Abstain</text><text x="20" y="79" fill="#d8c39a" font-size="13">Request better evidence</text></g>
+  <!-- 1 -->
+  <rect x="170" y="60" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="98" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">1&#183; Validate columns, dates, periods, coverage, completeness</text>
+  <line x1="470" y1="124" x2="470" y2="158" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
 
-    <path d="M900 679 H1070" stroke="#60a5fa" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-    <g transform="translate(1080 628)"><rect width="250" height="102" rx="14" fill="#10283a" stroke="#60a5fa"/><text x="20" y="30" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.3">NO MATERIAL DRIVER</text><text x="20" y="58" fill="#edf6fc" font-size="16" font-weight="700">Inconclusive</text><text x="20" y="81" fill="#9cb2c3" font-size="13">no_material_driver</text></g>
+  <!-- 2 -->
+  <rect x="170" y="160" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="198" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">2&#183; Create or prioritize hypotheses from approved dimensions</text>
+  <line x1="470" y1="224" x2="470" y2="258" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
 
-    <path d="M900 809 H1070" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-    <g transform="translate(1080 758)"><rect width="250" height="102" rx="14" fill="#2e2415" stroke="#f59e0b"/><text x="20" y="30" fill="#fbbf24" font-size="11" font-weight="700" letter-spacing="1.3">COMPETING EVIDENCE</text><text x="20" y="58" fill="#f3ead4" font-size="16" font-weight="700">No forced winner</text><text x="20" y="81" fill="#d8c39a" font-size="13">competing_explanations</text></g>
+  <!-- 3 -->
+  <rect x="170" y="260" width="600" height="64" rx="6" fill="#131C2E" stroke="#2DD4BF" stroke-width="2"/>
+  <text x="190" y="298" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">3&#183; Execute deterministic contribution tests</text>
+  <line x1="470" y1="324" x2="470" y2="358" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
 
-    <path d="M500 679 H330" stroke="#2dd4bf" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-    <g transform="translate(70 628)"><rect width="250" height="102" rx="14" fill="#0d2b32" stroke="#2dd4bf"/><text x="20" y="30" fill="#67e8d6" font-size="11" font-weight="700" letter-spacing="1.3">MATERIAL EVIDENCE</text><text x="20" y="58" fill="#eafaf7" font-size="16" font-weight="700">Continue deeper</text><text x="20" y="81" fill="#9ec8c0" font-size="13">Within governed depth</text></g>
-  </g>
+  <!-- 4 -->
+  <rect x="170" y="360" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="398" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">4&#183; Store the evidence from every test</text>
+  <line x1="470" y1="424" x2="470" y2="458" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
 
-  <g transform="translate(250 900)" font-family="Inter, Segoe UI, Arial, sans-serif">
-    <rect width="900" height="56" rx="16" fill="#0b2630" stroke="#2dd4bf"/>
-    <circle cx="34" cy="28" r="9" fill="#2dd4bf"/>
-    <text x="58" y="23" fill="#f1faf9" font-size="16" font-weight="700">Bounded conclusion + recommended analytical next action</text>
-    <text x="58" y="42" fill="#91b5ae" font-size="12">Completed, caveated, abstained, inconclusive, or bounded by maximum depth</text>
-  </g>
-  <path d="M700 854 V888" stroke="#2dd4bf" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <!-- 5 -->
+  <rect x="170" y="460" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="498" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">5&#183; Update each hypothesis: supported, weak, rejected, unresolved</text>
+  <line x1="470" y1="524" x2="470" y2="558" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 6 -->
+  <rect x="170" y="560" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="598" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">6&#183; Select a material contributor by total-movement share</text>
+  <line x1="470" y1="624" x2="470" y2="658" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 7 -->
+  <rect x="170" y="660" width="600" height="64" rx="6" fill="#131C2E" stroke="#2DD4BF" stroke-width="2"/>
+  <text x="190" y="698" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">7&#183; Scope one level deeper, if evidence and depth policy allow</text>
+  <line x1="470" y1="724" x2="470" y2="758" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 8 -->
+  <rect x="170" y="760" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="798" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">8&#183; Test competing explanations, run five verification challenges</text>
+  <line x1="470" y1="824" x2="470" y2="858" stroke="#4A5A7A" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 9 -->
+  <rect x="170" y="860" width="600" height="64" rx="6" fill="#131C2E" stroke="#2C3A57"/>
+  <text x="190" y="898" font-family="Segoe UI, -apple-system, sans-serif" font-size="14" fill="#E5E9F0">9&#183; Compile the bounded conclusion and next analytical action</text>
+
+  <!-- loop back path from step 7 to step 3 -->
+  <path d="M 170,692 C 70,692 70,292 170,292" fill="none" stroke="#2DD4BF" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow3)"/>
+  <text x="40" y="495" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#2DD4BF" transform="rotate(-90 40 495)">deeper scope loop</text>
+
+  <text x="450" y="960" text-anchor="middle" font-family="Segoe UI, -apple-system, sans-serif" font-size="12" fill="#5C6B8A">Stops early on unsafe data, competing evidence, no material driver, or maximum depth &#8212; never a forced winner.</text>
 </svg>

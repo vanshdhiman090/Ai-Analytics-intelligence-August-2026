@@ -9,6 +9,7 @@ import { boundedGoal, titleize } from "@/lib/rcaPresentation";
 
 const EMPTY_FORM = {
   kpiName: "",
+  kpiNameEdited: false,
   metricColumn: "",
   timeColumn: "",
   grain: "month",
@@ -55,6 +56,12 @@ function reducer(state, action) {
       return { ...state, isUploading: false, apiError: action.error, fieldErrors: action.fieldErrors || {} };
     case "SET_FIELD": {
       const form = { ...state.form, [action.field]: action.value };
+      if (action.field === "kpiName") {
+        form.kpiNameEdited = true;
+      }
+      if (action.field === "metricColumn" && !state.form.kpiNameEdited) {
+        form.kpiName = action.value ? titleize(action.value) : "";
+      }
       if (action.field === "grain") {
         form.baselinePeriod = "";
         form.comparisonPeriod = "";

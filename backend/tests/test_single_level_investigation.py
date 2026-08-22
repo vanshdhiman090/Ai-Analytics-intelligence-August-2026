@@ -64,6 +64,33 @@ def test_unsafe_current_period_is_detected_from_nulls_not_input_flag():
     assert not state.tests_executed
 
 
+def test_comparison_row_coverage_failure_message_describes_volume_not_missing_days():
+    rows = [{"date": "2026-01-01", "country": "Germany", "revenue": 100} for _ in range(10)]
+    rows += [{"date": "2026-02-01", "country": "Germany", "revenue": 100} for _ in range(7)]
+    state = run_single_level_investigation(pd.DataFrame(rows), request(candidate_dimensions=["country"]))
+    assert state.outcome == "data_quality_incident"
+    coverage_check = next(check for check in state.data_health if check.name == "Comparison row coverage")
+    assert coverage_check.status == "fail"
+    assert coverage_check.blocking
+    assert coverage_check.detail == "Comparison period has 70% of baseline period's transaction volume; minimum required is 80%."
+
+
+def test_comparison_row_coverage_pass_fail_threshold_logic_is_unchanged():
+    def coverage_check_for(comparison_rows):
+        rows = [{"date": "2026-01-01", "country": "Germany", "revenue": 100} for _ in range(10)]
+        rows += [{"date": "2026-02-01", "country": "Germany", "revenue": 100} for _ in range(comparison_rows)]
+        state = run_single_level_investigation(pd.DataFrame(rows), request(candidate_dimensions=["country"]))
+        return next(check for check in state.data_health if check.name == "Comparison row coverage")
+
+    below_threshold = coverage_check_for(7)  # 7/10 = 0.70 < default 0.8
+    assert below_threshold.status == "fail"
+    assert below_threshold.blocking
+
+    at_threshold = coverage_check_for(8)  # 8/10 = 0.80 == default 0.8, still passes (>=)
+    assert at_threshold.status == "pass"
+    assert not at_threshold.blocking
+
+
 def test_no_material_segment_abstains():
     rows = []
     for index in range(10):

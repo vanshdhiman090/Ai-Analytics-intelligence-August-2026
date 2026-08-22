@@ -485,6 +485,26 @@ test("KPI picker offers only additive quantities and dimension picker applies ro
   await expect(page.locator("label.dimension-option", { hasText: "Day Of Week" })).toHaveCount(1);
 });
 
+test("KPI name follows the metric column until manually edited, then a manual edit survives further metric switches", async ({ page }) => {
+  await mockApi(page, { datasetResponses: [coffeeShopDatasetResponse()] });
+  await page.goto("/");
+  await page.locator("#dataset-file").setInputFiles(revenueFile);
+  await expect(page.getByRole("heading", { name: "Define the additive KPI" })).toBeVisible();
+
+  // Metric A ("Total Bill") is auto-selected on upload; KPI name auto-fills to match it.
+  await expect(page.getByLabel("Metric column")).toHaveValue("Total Bill");
+  await expect(page.getByLabel("KPI name")).toHaveValue("Total Bill");
+
+  // Switching to metric B ("Unit Price") re-derives the still-untouched KPI name.
+  await page.getByLabel("Metric column").selectOption("Unit Price");
+  await expect(page.getByLabel("KPI name")).toHaveValue("Unit Price");
+
+  // A manual edit to KPI name must not be clobbered by a later metric switch.
+  await page.getByLabel("KPI name").fill("Custom KPI Label");
+  await page.getByLabel("Metric column").selectOption("Total Bill");
+  await expect(page.getByLabel("KPI name")).toHaveValue("Custom KPI Label");
+});
+
 for (const failure of [
   { name: "dataset unavailable", status: 409, code: "dataset_unavailable", message: "The requested dataset is unavailable.", requestId: "dataset-gone-5" },
   { name: "unexpected backend failure", status: 500, code: "investigation_failed", message: "The RCA investigation could not be completed.", requestId: "server-failure-6" },

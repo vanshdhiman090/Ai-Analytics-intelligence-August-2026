@@ -650,7 +650,7 @@ def _safe_period_frame(
     if len(baseline_rows) and len(current_rows):
         coverage = len(current_rows) / len(baseline_rows)
         add("Comparison row coverage", "pass" if coverage >= request.comparison_coverage_ratio else "fail", coverage < request.comparison_coverage_ratio,
-            f"Comparison row coverage is {coverage:.3f}; required minimum is {request.comparison_coverage_ratio:.3f}.", {"coverage_ratio": coverage})
+            f"Comparison period has {coverage:.0%} of baseline period's transaction volume; minimum required is {request.comparison_coverage_ratio:.0%}.", {"coverage_ratio": coverage})
         null_rate = float(current_rows["_investigation_metric"].isna().mean())
         add("Comparison metric completeness", "pass" if null_rate <= request.maximum_current_metric_null_pct else "fail", null_rate > request.maximum_current_metric_null_pct,
             f"Comparison metric null rate is {null_rate:.3f}; allowed maximum is {request.maximum_current_metric_null_pct:.3f}.", {"comparison_metric_null_rate": null_rate})
@@ -787,7 +787,7 @@ def _append_scoped_health(
     if periods_present:
         coverage = len(comparison) / len(baseline)
         add("Scoped comparison row coverage", "pass" if coverage >= request.comparison_coverage_ratio else "fail", coverage < request.comparison_coverage_ratio,
-            f"Scoped comparison row coverage is {coverage:.3f}; required minimum is {request.comparison_coverage_ratio:.3f}.", {"coverage_ratio": coverage})
+            f"Scoped comparison period has {coverage:.0%} of scoped baseline period's transaction volume; minimum required is {request.comparison_coverage_ratio:.0%}.", {"coverage_ratio": coverage})
         null_rate = float(comparison["_investigation_metric"].isna().mean())
         add("Scoped comparison metric completeness", "pass" if null_rate <= request.maximum_current_metric_null_pct else "fail", null_rate > request.maximum_current_metric_null_pct,
             f"Scoped comparison metric null rate is {null_rate:.3f}; allowed maximum is {request.maximum_current_metric_null_pct:.3f}.", {"comparison_metric_null_rate": null_rate})

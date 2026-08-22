@@ -12,9 +12,9 @@ An evidence-governed analytics agent that investigates why a business KPI moved 
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?logo=postgresql&logoColor=white)](https://neon.tech/)
 [![Gemini API](https://img.shields.io/badge/Gemini-API-8B5CF6?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Tests](https://img.shields.io/badge/Tests-323%20backend%20%C2%B7%2024%20browser-2EAD33?logo=pytest&logoColor=white)](#testing)
-[![CI](https://github.com/vanshdhiman090/Ai-Analytics-intelligence-August-2026/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/vanshdhiman090/Ai-Analytics-intelligence-August-2026/actions/workflows/backend-tests.yml)
+[![CI](https://github.com/vanshdhiman090/AI-Root-Cause-Investigation-Agent/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/vanshdhiman090/AI-Root-Cause-Investigation-Agent/actions/workflows/backend-tests.yml)
 
-**🔗 [Live app](https://ai-root-cause-investigation-agent.vercel.app)** · **[GitHub](https://github.com/vanshdhiman090/Ai-Analytics-intelligence-August-2026)**
+**🔗 [Live app](https://ai-root-cause-investigation-agent.vercel.app)** · **[GitHub](https://github.com/vanshdhiman090/AI-Root-Cause-Investigation-Agent)**
 
 **Current specialist capability:** Root Cause Investigation<br>
 **Application shell:** AI Analytics Intelligence
@@ -333,8 +333,8 @@ ai-analytics-workspace/
 **Setup**
 
 ```powershell
-git clone https://github.com/vanshdhiman090/Ai-Analytics-intelligence-August-2026.git
-cd Ai-Analytics-intelligence-August-2026
+git clone https://github.com/vanshdhiman090/AI-Root-Cause-Investigation-Agent.git
+cd AI-Root-Cause-Investigation-Agent
 .\Setup-Agent.ps1
 ```
 
